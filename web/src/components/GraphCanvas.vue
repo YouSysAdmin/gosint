@@ -1606,11 +1606,17 @@ onBeforeUnmount(() => {
 .legend {
   position: absolute;
   left: 12px;
+  /* Up to the minimap (160px wide, 12px from the edge) with a gap. */
+  right: 196px;
   bottom: 12px;
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  max-width: 60%;
+  pointer-events: none;
+}
+
+.legend > * {
+  pointer-events: auto;
 }
 
 .legend-item {
