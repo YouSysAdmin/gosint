@@ -698,7 +698,7 @@ onBeforeUnmount(() => {
             <span v-else class="custom-kind text-xs text-muted">
               {{ CUSTOM_KINDS.find((k) => k.value === r.kind)?.label }}
             </span>
-            <select v-if="r.kind === 'bool'" v-model="r.value" class="form-select">
+            <select v-if="r.kind === 'bool'" v-model="r.value" class="form-select custom-value">
               <option value="true">Yes</option>
               <option value="false">No</option>
             </select>
@@ -706,13 +706,13 @@ onBeforeUnmount(() => {
               v-else-if="r.kind === 'date'"
               v-model="r.value"
               type="date"
-              class="form-input"
+              class="form-input custom-value"
               title="Stored as YYYY-MM-DD text"
             />
             <input
               v-else
               v-model="r.value"
-              class="form-input"
+              class="form-input custom-value"
               :aria-invalid="r.error ? 'true' : undefined"
               :inputmode="r.kind === 'number' ? 'decimal' : undefined"
               :placeholder="r.kind === 'number' ? '0' : 'Value'"
@@ -1314,16 +1314,18 @@ onBeforeUnmount(() => {
 
 .custom-row {
   display: grid;
-  grid-template-columns: 32% 76px 1fr auto;
+  grid-template-columns: 1fr 128px auto;
   gap: 6px;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-sm);
 }
 
-.custom-row .form-input,
-.custom-row .form-select {
-  font-size: 12px;
-  padding: 4px 8px;
+.custom-row .custom-value {
+  grid-row: 2;
+  grid-column: 1 / -1;
 }
 
 .custom-error {
@@ -1336,6 +1338,8 @@ onBeforeUnmount(() => {
 }
 
 .custom-row .unlink {
+  grid-row: 1;
+  grid-column: 3;
   opacity: 1;
 }
 
