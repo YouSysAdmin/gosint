@@ -1,0 +1,1969 @@
+/* Design tokens.
+   Palette follows the shadcn dashboard template: the neutral scale,
+   flat surfaces, and an accent that is INK rather than a hue.
+
+   Three rules govern this file:
+
+   1. COLOUR MEANS STATUS, NEVER BRAND. The accent ramp is achromatic,
+      so green, amber, red and blue are the only hues on screen and
+      each one carries a meaning. An email console is a page of
+      statuses, and a coloured chrome competes with them.
+   2. Brand and status ramps are FILLS. Never use one as text on a
+      neutral surface - 500 and 600 do not reach 4.5:1 either way.
+      The --*-fg tokens carry the text and icon role instead, and they
+      flip per theme.
+   3. Surfaces stack --bg-secondary (page) under --bg-primary (card,
+      the one an operator reads on) under --bg-popover (menus). A
+      hover must never be darker than the surface it sits inside. */
+
+/* --------- Light Theme (default) --------- */
+:root,
+[data-theme='light'] {
+  /* Not a hue ramp: 50-300 are TINT SURFACES and 500-900 are SOLID
+     INK, with 400 the only step in between. Nothing may pick a step
+     out of the middle expecting a readable fill.
+
+     It INVERTS in the dark block, where 600 is near-white, which is
+     why the whole ramp is restated there rather than inherited. */
+  --primary-50: #f5f5f5;
+  --primary-100: #e5e5e5;
+  --primary-200: #d4d4d4;
+  --primary-300: #a1a1a1;
+  --primary-400: #525252;
+  --primary-500: #262626;
+  --primary-600: #171717;
+  --primary-700: #0a0a0a;
+  --primary-800: #171717;
+  --primary-900: #0a0a0a;
+
+  --success-500: #22c55e;
+  --success-600: #16a34a;
+  --success-700: #15803d;
+
+  --warning-500: #f59e0b;
+  --warning-600: #d97706;
+  --warning-700: #b45309;
+
+  --danger-500: #ef4444;
+  --danger-600: #dc2626;
+  --danger-700: #b91c1c;
+
+  /* Info is its OWN ramp, never the accent: with an achromatic accent
+     .badge-info and .badge-neutral would be the same grey chip, and
+     three columns tell their two states apart by exactly that
+     difference - draft or scheduled, pending or queued, global or
+     scoped to a list. */
+  --info-500: #3b82f6;
+  --info-600: #2563eb;
+  --info-700: #1d4ed8;
+
+  /* Surfaces */
+  --topbar: 44px;
+  --bg-primary: #ffffff;
+  --bg-secondary: #fafafa;
+  --bg-tertiary: #f5f5f5;
+  --bg-hover: #f5f5f5;
+  --bg-popover: #ffffff;
+  /* A step below --bg-hover rather than a tint of the accent. An
+     active row and a hovered row differ by tone alone, so they cannot
+     be one step apart. */
+  --bg-active: #e5e5e5;
+  --bg-input: transparent;
+  --bg-code: #f5f5f5;
+  --bg-sidebar: #fafafa;
+
+  /* Borders */
+  --border-primary: #e5e5e5;
+  --border-secondary: #f0f0f0;
+  --border-input: #e5e5e5;
+  --border-button: #e5e5e5;
+  --border-strong: #d4d4d4;
+  /* Ink, the strongest thing the palette has: a mid-grey ring is
+     about 2:1 against the border it replaces, and a focused control
+     must not look like an unfocused one. */
+  --border-focus: #171717;
+
+  /* Text */
+  --text-primary: #0a0a0a;
+  --text-secondary: #404040;
+  --text-tertiary: #525252;
+  --text-muted: #737373;
+  /* A placeholder is a hint, not a value. --text-muted is a TEXT
+     colour and clears 4.5:1, so a hint wearing it reads as something
+     already filled in. */
+  --text-placeholder: #a1a1a1;
+  --text-inverse: #fafafa;
+  --text-on-primary: #fafafa;
+  /* TEXT ON A STATUS FILL, a separate token because it does NOT flip.
+     --text-on-primary follows the accent, which inverts between the
+     themes, and a status fill is the same red, amber or green in
+     both. */
+  --text-on-status: #fafafa;
+  --text-code: #262626;
+
+  /* Accent and status as TEXT. Every one of these clears 4.5:1 on
+     --bg-primary, which the ramp values above do not. */
+  --accent-fg: #171717;
+  --success-fg: #15803d;
+  --warning-fg: #b45309;
+  /* -700 rather than -600. These also sit on their own tinted badge
+     and banner surfaces, which costs about 0.6 against plain white,
+     and -600 does not clear 4.5:1 there. */
+  --danger-fg: #b91c1c;
+  --info-fg: #1d4ed8;
+
+  --ring: rgba(10, 10, 10, 0.14);
+  --ring-neutral: #d4d4d4;
+
+  /* Flat by design. --shadow-sm is none, so a reference to it
+     degrades to flat. Only genuinely floating layers get a shadow. */
+  --shadow-sm: none;
+  --shadow: 0 2px 6px -1px rgba(9, 9, 11, 0.06);
+  --shadow-md: 0 4px 12px -2px rgba(9, 9, 11, 0.1), 0 1px 3px rgba(9, 9, 11, 0.05);
+  --shadow-lg: 0 12px 32px -8px rgba(9, 9, 11, 0.16), 0 4px 12px -4px rgba(9, 9, 11, 0.07);
+  --shadow-focus: 0 0 0 3px var(--ring);
+
+  --overlay: rgba(0, 0, 0, 0.45);
+
+  /* Opaque, not rgba-white. The rail follows the theme, and
+     translucent white on a near-white rail is invisible. */
+  --sidebar-hover: #f0f0f0;
+  --sidebar-border: #e5e5e5;
+  --sidebar-text: #525252;
+  --sidebar-text-active: #0a0a0a;
+  /* Tone and weight mark the active row, not a hue: a chip two steps
+     darker than the rail, with the text at full ink where every other
+     row sits at --sidebar-text. */
+  --sidebar-active-bg: #e5e5e5;
+  --sidebar-active-text: #0a0a0a;
+
+  --checkmark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='black'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m4.5 12.75 6 6 9-13.5' /%3E%3C/svg%3E");
+  --checkmark-color: #0a0a0a;
+  /* The graph's highlight: a selected entity, a lit relationship. */
+  --graph-accent: #ea580c;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' fill='none'%3E%3Cpath d='M4.5 6.75L9 11.25l4.5-4.5' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* --------- Dark Theme --------- */
+[data-theme='dark'] {
+  /* THE RAMP INVERTS. 600 is the button fill in both themes, so on a
+     near-black page it has to be near-white - which is the template's
+     dark primary exactly, and why --text-on-primary flips with it.
+     The tint steps (50, 100, 900) go dark for the same reason: they
+     are surfaces, and a surface follows its page. */
+  --primary-50: #262626;
+  --primary-100: #303030;
+  --primary-200: #e5e5e5;
+  --primary-300: #fafafa;
+  --primary-400: #a1a1a1;
+  --primary-500: #d4d4d4;
+  --primary-600: #e5e5e5;
+  --primary-700: #fafafa;
+  --primary-800: #fafafa;
+  --primary-900: #262626;
+
+  --bg-primary: #171717;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #262626;
+  --bg-hover: #262626;
+  --bg-popover: #1c1c1c;
+  --bg-active: #303030;
+  /* Inputs are RECESSED here, unlike the light theme where they are
+     transparent and defined by their border alone. A border alone
+     cannot be seen on a dark surface - dark on dark tops out around
+     1.3:1 - so two cues carry it: a darker well, plus a border that
+     clears 3:1 against both the card and the popover. */
+  --bg-input: #0f0f0f;
+  --bg-code: #0a0a0a;
+  --bg-sidebar: #0a0a0a;
+
+  --border-primary: #262626;
+  --border-secondary: #1f1f1f;
+  /* 3:1 against BOTH the card and the popover, and a modal is the
+     darker of the two. #666666 lands at 2.97 there, so this is a
+     shade lighter than it looks like it needs to be. */
+  --border-input: #6a6a6a;
+  /* Buttons keep the quieter outline. They are already legible as
+     buttons - a label inside a padded, rounded shape - so the loud
+     border the inputs need would only make the page shout. */
+  --border-button: #333333;
+  --border-strong: #737373;
+  --border-focus: #e5e5e5;
+
+  --text-primary: #fafafa;
+  --text-secondary: #d4d4d4;
+  --text-tertiary: #a1a1a1;
+  --text-muted: #8f8f8f;
+  --text-placeholder: #6b6b6b;
+  --text-inverse: #171717;
+  /* Flipped: --primary-600 is what a button, an avatar and a checked
+     box are filled with, and here that fill is near-white. */
+  --text-on-primary: #171717;
+  /* NOT flipped. The status fills are the same red, amber and green in
+     both themes, so what sits on them is the same near-white in both -
+     4.65:1 on --danger-600. */
+  --text-on-status: #fafafa;
+  --text-code: #d4d4d4;
+
+  --accent-fg: #fafafa;
+  --success-fg: #4ade80;
+  --warning-fg: #fbbf24;
+  --danger-fg: #f87171;
+  /* #1d4ed8 is 2.2 on this page. Blue-300 instead. */
+  --info-fg: #93c5fd;
+
+  --ring: rgba(250, 250, 250, 0.18);
+  --ring-neutral: #4d4d4d;
+
+  --shadow-sm: none;
+  --shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 32px -8px rgba(0, 0, 0, 0.7), 0 4px 12px -4px rgba(0, 0, 0, 0.5);
+  --shadow-focus: 0 0 0 3px var(--ring);
+
+  --overlay: rgba(0, 0, 0, 0.65);
+
+  --sidebar-hover: #1f1f1f;
+  --sidebar-border: #1f1f1f;
+  --sidebar-text: #8f8f8f;
+  --sidebar-text-active: #fafafa;
+  --sidebar-active-bg: #262626;
+  --sidebar-active-text: #fafafa;
+
+  --checkmark-color: #fafafa;
+  --graph-accent: #fb923c;
+}
+
+/* --------- Shared tokens --------- */
+:root {
+  /* Loaded in main.ts from @fontsource-variable. A family named here
+     must be loaded somewhere, or the stack silently falls through to
+     the system font. */
+  --font-sans:
+    'Geist Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* The -50 tints are DERIVED, not listed per theme. The light block
+     is selected by ":root, [data-theme=light]", so a dark element
+     still matches :root and inherits every token the dark block does
+     not restate. Mixing against --bg-primary resolves at use time, so
+     these follow whatever theme is active.
+
+     --primary-50 is NOT among them and cannot be: 10% of a near-black
+     ink is darker than --bg-tertiary, so a banner would sit on a
+     heavier surface than the hover state beside it. It is stated in
+     both theme blocks instead, and must stay absent here: this rule
+     comes LAST at equal specificity, so a value here would win over
+     both. */
+  --success-50: color-mix(in srgb, var(--success-500) 10%, var(--bg-primary));
+  --warning-50: color-mix(in srgb, var(--warning-500) 10%, var(--bg-primary));
+  --danger-50: color-mix(in srgb, var(--danger-500) 10%, var(--bg-primary));
+  --info-50: color-mix(in srgb, var(--info-500) 10%, var(--bg-primary));
+
+  /* One source for every radius in the console. */
+  --radius-base: 0.625rem;
+  --radius-sm: calc(var(--radius-base) - 4px);
+  --radius: calc(var(--radius-base) - 2px);
+  --radius-md: var(--radius-base);
+  --radius-lg: var(--radius-base);
+  --radius-xl: calc(var(--radius-base) + 4px);
+
+  --control-h: 36px;
+  --control-h-sm: 32px;
+  --control-h-xs: 26px;
+  --row-h: 44px;
+  --gutter: 24px;
+
+  --transition: 150ms ease;
+  --transition-slow: 250ms ease;
+  color-scheme: light dark;
+}
+
+/* --------- Reset --------- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background var(--transition-slow),
+    color var(--transition-slow);
+}
+
+/* --accent-fg, not --primary-500: the ramp value does not reach
+   4.5:1 on white.
+
+   A LINK CANNOT BE TOLD BY ITS COLOUR. The accent is ink and body text
+   is ink, so the underline is the only cue left that is not a hue.
+
+   `a:not([class])` is the whole scope: every anchor carrying a class
+   is a nav row, a button or a tab, and underlining those would be
+   wrong. The bare ones are the prose and table links. */
+a {
+  color: var(--accent-fg);
+  text-decoration: none;
+}
+
+a:not([class]) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  /* Quiet until pointed at. A full-strength underline under every
+     table cell reads as a page of struck-through text. */
+  text-decoration-color: var(--border-strong);
+  transition: text-decoration-color var(--transition);
+}
+
+a:not([class]):hover {
+  text-decoration-color: currentColor;
+}
+
+/* --------- Buttons --------- */
+/* 36px, the same height as an input: a shorter button beside a
+   field reads as misaligned, and this console is form-heavy. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--control-h);
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    background-color var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
+  line-height: 1;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
+}
+
+.btn-primary {
+  background: var(--primary-600);
+  color: var(--text-on-primary);
+  border-color: var(--primary-600);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-700);
+  border-color: var(--primary-700);
+}
+
+.btn-outline-primary {
+  background: transparent;
+  color: var(--accent-fg);
+  border-color: var(--accent-fg);
+}
+
+.btn-outline-primary:hover:not(:disabled) {
+  background: var(--bg-active);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border-button);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.btn-danger {
+  background: var(--danger-600);
+  color: var(--text-on-status);
+  border-color: var(--danger-600);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-700);
+  border-color: var(--danger-700);
+}
+
+.btn-sm {
+  height: var(--control-h-sm);
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+/* --------- Form Elements --------- */
+.form-group {
+  margin-bottom: 16px;
+}
+
+/* Two short fields read as one question - which version in which
+   language, a country beside a city, two halves of a limit. One column
+   on a phone, where 1fr 1fr leaves neither field wide enough to type in.
+
+   No row gap on purpose: every child here is a .form-group and already
+   carries 16px under it, so a gap would double the space between rows
+   and leave the last row sitting on a bigger margin than the rest. */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+/* In the light theme --bg-input is transparent, so a control inherits
+   whatever surface it sits on and is defined by its border alone -
+   which is what keeps a form on a card from looking like a stack of
+   grey boxes. The dark theme overrides it with a recessed well,
+   because a border alone cannot be seen there. See the dark block. */
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 12px;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
+  outline: none;
+}
+
+.form-input:hover:not(:disabled):not(:focus),
+.form-select:hover:not(:disabled):not(:focus),
+.form-textarea:hover:not(:disabled):not(:focus) {
+  border-color: var(--border-strong);
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--text-placeholder);
+}
+
+.form-input:disabled,
+.form-select:disabled,
+.form-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A textarea is multi-line, so it cannot take the fixed control
+   height the single-line controls share. Monospace is deliberate -
+   these carry HTML bodies, recipient lists and JSON. */
+.form-textarea {
+  height: auto;
+  min-height: 100px;
+  padding: 10px 12px;
+  line-height: 1.5;
+  resize: vertical;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* Safari and iOS zoom the page when a focused control is under 16px.
+   Only the coarse-pointer case needs the bump, so the desktop
+   density is left alone. */
+@media (pointer: coarse) {
+  .form-input,
+  .form-select,
+  .form-textarea {
+    font-size: 16px;
+  }
+}
+
+/* --------- form select picker  ---------  */
+
+/* OPTING OUT OF THE NATIVE SELECT, which is the only way to style what
+   drops out of one. `base-select` hands us the popup as a real element,
+   so the list below can carry the console's own surface, radius and
+   hover instead of the operating system's.
+
+   Chrome 135+ only. Everywhere else the browser keeps its own control,
+   which is a working select and not a broken one - so nothing here is a
+   fallback, it is a progressive addition. */
+.form-select,
+.form-select::picker(select) {
+  appearance: base-select;
+}
+
+.form-select {
+  background-color: var(--bg-input);
+  cursor: pointer;
+  align-items: center;
+}
+
+.form-select::picker(select) {
+  background-color: var(--bg-popover);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  min-width: anchor-size(width);
+  margin-top: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ring-neutral) transparent;
+}
+
+/* The default icon under base-select is a filled triangle, not the
+   chevron the native control drew. Feather chevron-down through a mask,
+   the same way the checkmark below is drawn, so it follows the text
+   colour in both themes. */
+.form-select::picker-icon {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  align-self: center;
+  flex: none;
+  background-color: currentColor;
+  mask-image: var(--select-chevron);
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.form-select option {
+  padding: 8px 12px;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text-primary);
+  background-color: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.form-select option:hover {
+  background-color: var(--bg-hover);
+}
+
+.form-select option:checked {
+  background-color: var(--bg-active);
+  color: var(--primary-700);
+  font-weight: 500;
+}
+
+[data-theme='dark'] .form-select option:checked {
+  color: var(--primary-300);
+}
+
+option::checkmark {
+  order: 1;
+  margin-left: auto;
+  content: '';
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+
+  background-color: var(--checkmark-color);
+  mask-image: var(--checkmark);
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* A text button inside a hint that reveals more of the form - the
+   optional fields most sends leave empty. Inherits the hint's size so
+   it reads as part of the sentence, coloured so it reads as a control. */
+.form-reveal {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary-600);
+  font: inherit;
+  cursor: pointer;
+}
+
+.form-reveal:hover {
+  text-decoration: underline;
+}
+
+.form-error {
+  font-size: 12px;
+  color: var(--danger-fg);
+  margin-top: 4px;
+}
+
+/* --------- Cards --------- */
+/* A border and a surface shift, no elevation. overflow: hidden lets
+   a table sit flush inside the rounded corners without its own
+   radius - nothing in the views positions out of a card. */
+.card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition:
+    background var(--transition-slow),
+    border-color var(--transition-slow);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+/* Every heading level, the way .modal-header does it, so a card
+   heading written as h3 cannot render at the browser's own size. */
+.card-header h1,
+.card-header h2,
+.card-header h3,
+.card-header h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.card-body {
+  padding: 16px;
+}
+
+/* Stacked cards space themselves. A grid uses gap, so it opts out. */
+.card + .card,
+.stats-grid + .card {
+  margin-top: 24px;
+}
+
+/* A tab strip is a page control, a flush card header, or a card-body opener. */
+.card-header .tabs {
+  margin-bottom: 0;
+}
+
+.card-body > .tabs {
+  margin-bottom: 16px;
+}
+
+/* --------- Tables --------- */
+/* The wrapper carries no radius of its own - the card clips it. */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Unfilled header. A filled strip reads as another surface layer and
+   competes with the card it sits in. Sentence case rather than
+   uppercase, which is hard to scan across seven columns. */
+th {
+  text-align: left;
+  height: 40px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+td {
+  height: var(--row-h);
+  padding: 0 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border-secondary);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+/* The card edge or the pagination bar draws the line under the last
+   row, so the row must not draw a second one on top of it. */
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tr {
+  transition: background var(--transition);
+}
+
+tbody tr:hover td {
+  background: var(--bg-hover);
+}
+
+/* --------- Badges --------- */
+/* Pill with a tinted fill and a hairline. The text stays coloured
+   rather than going muted with only a dot to carry meaning - the
+   template can do that because it has six states everyone memorizes,
+   whereas here the badge is the only status label in a table column
+   across a dozen different vocabularies. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* Colour comes from the -fg tokens. The ramp values do not reach AA
+   as text at this size. */
+.badge-success {
+  background: var(--success-50);
+  color: var(--success-fg);
+  border-color: color-mix(in srgb, var(--success-500) 22%, transparent);
+}
+
+.badge-danger {
+  background: var(--danger-50);
+  color: var(--danger-fg);
+  border-color: color-mix(in srgb, var(--danger-500) 22%, transparent);
+}
+
+.badge-warning {
+  background: var(--warning-50);
+  color: var(--warning-fg);
+  border-color: color-mix(in srgb, var(--warning-500) 22%, transparent);
+}
+
+.badge-info {
+  background: var(--info-50);
+  color: var(--info-fg);
+  border-color: color-mix(in srgb, var(--info-500) 22%, transparent);
+}
+
+.badge-neutral {
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  border-color: var(--border-primary);
+}
+
+.badge-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--border-primary);
+}
+
+/* --------- Notices --------- */
+/* A remark that stays on the page, as opposed to a toast that goes away.
+   FLAT like the badges above and reading the same tokens at the same
+   strength, since a warning notice and a warning badge appear together.
+   The severity is the only thing a variant states, so the box below owns
+   everything about the shape and each variant is three lines. */
+.notice {
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* The body is whatever the caller passed, which is paragraphs. Spaced
+   here rather than by the caller, since a notice with two sentences in
+   two <p>s should not have to say so. */
+.notice > p {
+  margin: 0;
+}
+
+.notice > p + p {
+  margin-top: 4px;
+}
+
+/* The lead line, in the notice's own colour where the body stays
+   readable grey - the severity is stated once and loudly. */
+.notice-head {
+  font-weight: 600;
+  color: inherit;
+}
+
+.notice > *:not(.notice-head) {
+  color: var(--text-secondary);
+}
+
+.notice strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.notice-info {
+  background: var(--info-50);
+  color: var(--info-fg);
+  border-color: color-mix(in srgb, var(--info-500) 22%, transparent);
+}
+
+.notice-success {
+  background: var(--success-50);
+  color: var(--success-fg);
+  border-color: color-mix(in srgb, var(--success-500) 22%, transparent);
+}
+
+.notice-warning {
+  background: var(--warning-50);
+  color: var(--warning-fg);
+  border-color: color-mix(in srgb, var(--warning-500) 22%, transparent);
+}
+
+.notice-danger {
+  background: var(--danger-50);
+  color: var(--danger-fg);
+  border-color: color-mix(in srgb, var(--danger-500) 22%, transparent);
+}
+
+/* --------- Stats --------- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Flat, and no lift on hover - a dashboard tile is not a control,
+   and a transform on hover implies it can be clicked. */
+.stat-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  transition:
+    background var(--transition-slow),
+    border-color var(--transition-slow);
+}
+
+.stat-card .stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.stat-card .stat-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.stat-card .stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.stat-card .stat-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* A STAT ICON IS DECORATION AND IS NOT COLOURED, and there are no
+   colour variants of it. Colour means STATUS: a stat card already
+   says "Failed" in words with the number beside it, so a tint under
+   its glyph repeats the label in a language the badges need for
+   themselves. */
+.stat-card .stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+}
+
+/* --------- Page Headers --------- */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 12px;
+}
+
+/* The header's right-hand group: refresh, export, the primary action.
+   .page-header is space-between and expects exactly TWO children, so a
+   third one lands in the middle of the page. Everything that is not
+   the title goes in here. */
+.page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.page-header h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* --------- Alerts ---------
+   A message the page needs to make impossible to miss: the error on a
+   sign-in form, the reason a reset link was refused. Shared, so every
+   auth page renders it the same way. */
+.alert {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.alert-danger {
+  background: var(--danger-50);
+  color: var(--danger-700);
+  border: 1px solid color-mix(in srgb, var(--danger-500) 25%, transparent);
+}
+
+.alert-warning {
+  background: color-mix(in srgb, var(--warning-500) 10%, transparent);
+  color: var(--warning-fg);
+  border: 1px solid color-mix(in srgb, var(--warning-500) 25%, transparent);
+}
+
+.alert-success {
+  background: color-mix(in srgb, var(--success-500) 10%, transparent);
+  color: var(--success-fg);
+  border: 1px solid color-mix(in srgb, var(--success-500) 25%, transparent);
+}
+
+/* A form's own submit button, full width. */
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+/* The footer of a list that pages by cursor. */
+.load-more {
+  display: flex;
+  justify-content: center;
+  padding: 14px 24px;
+  border-top: 1px solid var(--border-primary);
+}
+
+/* Monospace, for a value that is read character by character: a PEM, a
+   template body, a DNS record. */
+.code-font {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* --------- Pagination --------- */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-primary);
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* --------- Modal --------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 150ms ease;
+}
+
+.modal {
+  background: var(--bg-popover);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalSlideUp 200ms ease;
+}
+
+/* The width scale, and it has to sit AFTER .modal: both are one class
+   deep, so source order decides the cascade, and above .modal every
+   step would lose to its max-width. Every dialog width lives here and
+   nowhere else.
+
+   Numbered, because a number cannot drift the way a name describing
+   intent does. Scoped rules cannot serve here either: a size passed to
+   BaseModal lands on BaseModal's element and carries BaseModal's
+   scope. */
+.modal-w440 {
+  max-width: 440px;
+}
+
+.modal-w480 {
+  max-width: 480px;
+}
+
+.modal-w560 {
+  max-width: 560px;
+}
+
+.modal-w640 {
+  max-width: 640px;
+}
+
+.modal-w720 {
+  max-width: 720px;
+}
+
+.modal-w760 {
+  max-width: 760px;
+}
+
+.modal-w800 {
+  max-width: 800px;
+}
+
+.modal-w860 {
+  max-width: 860px;
+}
+
+.modal-w900 {
+  max-width: 900px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+/* Every heading level, so a modal cannot get a bigger title by
+   being written with h2. */
+.modal-header h1,
+.modal-header h2,
+.modal-header h3,
+.modal-header h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 16px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-primary);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------- Notification Toast --------- */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toast {
+  position: relative;
+  /* 16 rather than 14 on the left: the accent below is 3px sitting
+     inside a 1px border, so the text sits 17px from the edge on both
+     sides. */
+  padding: 12px 14px 12px 16px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius);
+  /* A toast is a BUTTON - clicking it dismisses it, and a div doing
+     that is unreachable from the keyboard. These two undo what the
+     browser gives a button and nothing else does: centred text, and a
+     font that does not inherit. */
+  text-align: left;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--bg-popover);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  animation: slideIn 200ms ease;
+  min-width: 280px;
+  max-width: 420px;
+  cursor: pointer;
+}
+
+/* The severity stripe, a BAR rather than a thick border-left. A border
+   follows the box's radius and reads as a second outline rather than as
+   a mark down the side. Inset by the radius at both ends, it is a
+   straight line between the toast's own rounded corners. */
+.toast::before {
+  content: '';
+  position: absolute;
+  top: var(--radius);
+  bottom: var(--radius);
+  left: 0;
+  width: 3px;
+  background: var(--text-tertiary);
+}
+
+.toast-success::before {
+  background: var(--success-fg);
+}
+
+.toast-error::before {
+  background: var(--danger-fg);
+}
+
+.toast-info::before {
+  background: var(--info-fg);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* --------- Two-pane reader --------- */
+/* A list of messages beside the one being read, shared by the inbound
+   log and the sandbox.
+   The page supplies the definite height and the split supplies the
+   floor. Both are needed: without the height the split has nothing to
+   fill, so flex:1 sizes it to its content and the page scrolls even
+   where everything would have fitted. Without the floor, whatever sits
+   above it comes out of the split's share and can crush it.
+   52px is the topbar, the gutters are .main-content's own padding, and
+   dvh so a mobile browser's collapsing address bar does not leave the
+   split hanging below the fold. */
+.reader-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 52px - 2 * var(--gutter));
+}
+
+.reader-split {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  /* Takes the room the rows above leave, but never less than this -
+     below about 26rem a two-pane reader stops being usable, and it is
+     better for the page to scroll than for the message to be read
+     through a slot. */
+  flex: 1;
+  min-height: 26rem;
+  padding: 0;
+  overflow: hidden;
+}
+
+.list-pane {
+  min-height: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-primary);
+}
+
+/* Stays put while the list moves under it. */
+.list-filter {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.message-search-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* A slotted control takes the room, the toggle keeps its own width. */
+.message-search-bar > .form-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.message-search-toggle {
+  flex-shrink: 0;
+}
+
+.message-search-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--primary-600);
+  color: var(--text-on-primary);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.message-search-fields {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.list-more {
+  padding: 12px;
+  text-align: center;
+}
+
+.reader-pane {
+  min-height: 0;
+  /* NOT scrollable: the reader manages its own rows and hands the
+     scrolling to whichever one holds the body. */
+  overflow: hidden;
+}
+
+/* 1024px is where the layout already collapses its sidebar, so it is
+   where two panes stop fitting side by side too. Stacked, they cannot
+   both have the screen: the list takes a fixed slice off the top and the
+   reader keeps the rest, which is still one scrollbar each. */
+@media (max-width: 1024px) {
+  .reader-split {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 14rem minmax(0, 1fr);
+  }
+
+  .list-pane {
+    border-right: none;
+    border-bottom: 1px solid var(--border-primary);
+  }
+}
+
+/* --------- Empty State --------- */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+}
+
+.empty-state h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.empty-state p {
+  font-size: 14px;
+}
+
+/* --------- Loading --------- */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-primary);
+  border-top-color: var(--primary-500);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+/* --------- Checkbox --------- */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.checkbox-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-600);
+}
+
+input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-input);
+
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+input[type='checkbox']:hover:not(:disabled) {
+  border-color: var(--border-focus);
+}
+
+input[type='checkbox']:checked {
+  background-color: var(--primary-600);
+  border-color: var(--primary-600);
+}
+
+input[type='checkbox']::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background-color: var(--text-on-primary);
+
+  mask: var(--checkmark) no-repeat center;
+  -webkit-mask: var(--checkmark) no-repeat center;
+  mask-size: contain;
+  -webkit-mask-size: contain;
+
+  transform: scale(0);
+  transition: transform 0.1s ease-in-out;
+}
+
+input[type='checkbox']:checked::before {
+  transform: scale(1);
+}
+
+/* --------- Code block --------- */
+.code-block {
+  /* Stated, not left to the tag. Every declaration below wants a block
+     box, and on an inline <code> padding and border apply to the FIRST
+     and LAST line boxes only, so a two-line value comes out ragged. */
+  display: block;
+  background: var(--bg-code);
+  /* --bg-code follows the theme, so the text must too. */
+  color: var(--text-code);
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  overflow-x: auto;
+  user-select: all;
+  border: 1px solid var(--border-primary);
+  max-width: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* --------- Status --------- */
+.verified {
+  color: var(--success-fg);
+}
+
+.unverified {
+  color: var(--text-muted);
+}
+
+/* --------- Tabs --------- */
+/* Carve-out from the flat rule. With --shadow-sm none, a white chip
+   on the light track is about 1.04:1 and invisible, so the track
+   border plus a bordered active chip carries the distinction without
+   reintroducing elevation. */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  padding: 3px;
+  border-radius: var(--radius);
+  width: fit-content;
+}
+
+.tab {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-tertiary);
+  transition:
+    color var(--transition),
+    background-color var(--transition),
+    border-color var(--transition);
+  font-family: inherit;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tab.active {
+  background: var(--bg-primary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+/* The header of a pane, carrying a tab group and whatever sits opposite
+   it. One rule for every pane, so two columns side by side read as one
+   tool. */
+.strip {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+}
+
+/* The strip supplies the spacing, so the tab group drops the margin it
+   carries for standing alone on a page. */
+.strip .tabs {
+  margin-bottom: 0;
+}
+
+/* --------- Facts --------- */
+/* A definition list read as label-and-value pairs - what a key, a
+   template version or a message is. Placement stays with the caller:
+   one of these is a card body and pads itself, another sits inside one
+   and only needs the space below. */
+.facts {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 10px 16px;
+  font-size: 14px;
+}
+
+.facts dt {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.facts dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--text-primary);
+  /* A key, a token or a long header value has no spaces to break at. */
+  overflow-wrap: anywhere;
+}
+
+/* Stacked below the label column's own width, where two columns would
+   leave a value about six characters wide. */
+@media (max-width: 640px) {
+  .facts {
+    grid-template-columns: 1fr;
+    gap: 4px 0;
+  }
+
+  .facts dd {
+    margin-bottom: 8px;
+  }
+}
+
+/* --------- List page furniture --------- */
+/* The controls above a list, and the page controls below it. */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+/* A sentence under a card heading saying what the card is for. */
+.header-sub {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+/* --------- Utilities --------- */
+/* The scale is 4px per step, so the name is the multiplier: mt-2 is
+   8px. Spacing comes from here, never from an inline declaration. */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-sm {
+  font-size: 13px;
+}
+
+.text-xs {
+  font-size: 12px;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* The -fg tokens, never the ramp: a ramp value does not reach 4.5:1
+   on a neutral surface (rule 2 at the top of this file). */
+.text-danger {
+  color: var(--danger-fg);
+}
+
+.text-success {
+  color: var(--success-fg);
+}
+
+.text-accent {
+  color: var(--accent-fg);
+}
+
+.fw-medium {
+  font-weight: 500;
+}
+
+.fw-semibold {
+  font-weight: 600;
+}
+
+.m-0 {
+  margin: 0;
+}
+
+.mt-1 {
+  margin-top: 4px;
+}
+
+.mt-2 {
+  margin-top: 8px;
+}
+
+.mt-3 {
+  margin-top: 12px;
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.mt-5 {
+  margin-top: 20px;
+}
+
+.mb-1 {
+  margin-bottom: 4px;
+}
+
+.mb-2 {
+  margin-bottom: 8px;
+}
+
+.mb-3 {
+  margin-bottom: 12px;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+.mb-5 {
+  margin-bottom: 20px;
+}
+
+.ml-2 {
+  margin-left: 8px;
+}
+
+.ml-auto {
+  margin-left: auto;
+}
+
+.mr-1 {
+  margin-right: 4px;
+}
+
+.mr-2 {
+  margin-right: 8px;
+}
+
+.pt-0 {
+  padding-top: 0;
+}
+
+.pb-0 {
+  padding-bottom: 0;
+}
+
+.flex {
+  display: flex;
+}
+
+.hidden {
+  display: none;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.items-start {
+  align-items: flex-start;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.flex-2 {
+  flex: 2;
+}
+
+.gap-1 {
+  gap: 4px;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+.gap-6 {
+  gap: 24px;
+}
+
+/* Filter row controls. Every list page has a search box and a status
+   select above its table, and each has ONE width so the pages line
+   up. */
+.w-search {
+  max-width: 320px;
+}
+
+.w-filter {
+  max-width: 200px;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* There is no .cursor-pointer. A clickable row is .row-clickable,
+   which sets the pointer AND the hover. */
+
+/* --------- Data table polish --------- */
+/* A cell whose value is one thing, a timestamp mostly: the table
+   shrinks the column and folds it onto two lines while the columns
+   beside it still have room. */
+.cell-nowrap {
+  white-space: nowrap;
+}
+
+.cell-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A row title that opens the thing it names. Most are a router-link,
+   the API keys one is a button because its target is a modal with no
+   URL - one class so the two are indistinguishable to a reader. */
+.cell-link {
+  font: inherit;
+  font-weight: 500;
+  color: var(--accent-fg);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cell-link:hover {
+  color: var(--primary-800);
+}
+
+[data-theme='dark'] .cell-link:hover {
+  color: var(--primary-300);
+}
+
+/* Right-aligned row action cluster --- keeps icon buttons from wrapping oddly. */
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+/* The row-actions popover (components/ActionMenu.vue). One recipe here
+   rather than a scoped copy per table, the same reason every shared
+   class lives in this file. Fixed, because it is teleported out of the
+   table wrapper - see the component for why. */
+.action-menu-trigger {
+  display: inline-flex;
+}
+
+.action-menu-trigger .btn svg {
+  margin-left: 4px;
+}
+
+.action-menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-lg);
+}
+
+.action-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action-menu-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.action-menu-item-danger {
+  color: var(--danger-600);
+}
+
+/* A row whose whole area opens what it names. It carries the pointer
+   AND the hover, which is why it exists as one class: a row with only
+   the cursor sits dead under it. */
+.row-clickable {
+  cursor: pointer;
+}
+
+.row-clickable:hover td {
+  background: var(--bg-hover);
+}
+
+/* Status pill with a leading colored dot --- inherits the badge color. */
+.badge-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+/* Amber cannot carry white text, it is far under AA even for large
+   text. An outlined treatment keeps the warning reading as a warning
+   without inventing a darker amber outside the status palette. */
+.btn-warning {
+  background: transparent;
+  color: var(--warning-fg);
+  border-color: var(--warning-fg);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: var(--warning-50);
+}
+
+/* --------- Scrollbar --------- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* A neutral, not a text colour. --text-muted is sized for readable
+   type, which makes a permanently visible bar far too heavy. */
+::-webkit-scrollbar-thumb {
+  background: var(--ring-neutral);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* The picker's scrollbar is done up on .form-select::picker(select) by
+   the standard scrollbar-width and scrollbar-color. No
+   ::picker(select)::-webkit-scrollbar block: chaining two
+   pseudo-elements is refused by Lightning CSS, and every browser new
+   enough for the picker honours scrollbar-color anyway. */
+
+/* The signed-out pages: sign in, register, forgot, reset, confirm.
+   AuthPage.vue holds the shell - what follows is what goes INSIDE its
+   card, so it has to be here rather than scoped to that component: a
+   scoped rule reaches a child's root element and nothing deeper, and
+   these are the slotted body. */
+.auth-note {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* The quiet line under a form - "Forgot your password?", "No account
+   yet?". Centred, because the button above it is full width. */
+.auth-aside {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 13px;
+}
+
+/* "or", ruled off on both sides, between the password form and the
+   passkey and SSO buttons. */
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.auth-or::before,
+.auth-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-primary);
+}
+
+/* Tighter than a settings page: an auth card is two fields read in one
+   glance, where a form full of them wants the air. */
+.auth-form .form-group {
+  margin-bottom: 14px;
+}

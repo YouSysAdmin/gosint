@@ -1,0 +1,12 @@
+name: domain_to_wayback
+description: Snapshots of the domain in the Wayback Machine, as websites
+category: Domain
+input: domain
+output: website
+run: python3 domain_to_wayback.py
+timeout: 90
+params:
+  - name: limit
+    type: number
+    description: How many snapshots to list, newest first
+    default: "20"

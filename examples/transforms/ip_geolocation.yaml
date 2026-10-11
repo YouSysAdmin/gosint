@@ -1,0 +1,25 @@
+# A template: fills an ip entity in place from ip-api.com (free, no
+# key, 45 requests a minute). Same input and output type with no array
+# means the mapped fields are laid over the input.
+name: ip_geolocation
+description: Country, city and ISP of an address from ip-api.com
+category: IP
+version: 1.0
+input:
+  type: ip
+  key: address
+request:
+  method: GET
+  url: "http://ip-api.com/json/{{address}}"
+  params:
+    fields: "status,country,city,lat,lon,isp"
+response:
+  expect: json
+  map:
+    country: country
+    city: city
+    latitude: lat
+    longitude: lon
+    isp: isp
+output:
+  type: ip

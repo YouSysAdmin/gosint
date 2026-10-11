@@ -1,0 +1,24 @@
+# Gosint, Copyright (c) 2026 YouSysAdmin
+#
+# Local dev stack for the TEAM backend (task dev-up). The local backend is
+# sqlite and needs nothing here. compose.yaml is the production stack.
+#
+# Postgres on :5434 (overridable with GOSINT_PG_PORT), files in
+# dev-data/pg, plus a gosint_test database for the store tests.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: gosint
+      POSTGRES_PASSWORD: gosint
+      POSTGRES_DB: gosint
+    ports:
+      - "127.0.0.1:${GOSINT_PG_PORT:-5434}:5432"
+    volumes:
+      - ./dev-data/pg:/var/lib/postgresql/data
+      - ./scripts/pg-init.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gosint -d gosint"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

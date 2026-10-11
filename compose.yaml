@@ -1,0 +1,68 @@
+# Gosint, Copyright (c) 2026 YouSysAdmin
+#
+# A single node on sqlite, behind a reverse proxy that holds the
+# certificate. The database, files, cache and transform files live in
+# the gosint-data volume.
+#
+#   GOSINT_PUBLIC_URL=https://osint.example.com docker compose up -d
+#
+# Then open the console and choose the unseal key. After every restart
+# the server waits sealed until it is entered again, unless the
+# unseal_key secret below is turned on.
+#
+# The dev postgres for the team backend is compose.dev.yaml.
+services:
+  gosint:
+    # Pin a release in production, latest moves with every release.
+    image: ghcr.io/yousysadmin/gosint:${GOSINT_VERSION:-latest}
+    restart: unless-stopped
+    init: true
+    environment:
+      GOSINT_DATABASE_DRIVER: sqlite
+      GOSINT_DATABASE_DSN: /data/gosint.db
+      GOSINT_SERVER_ADDR: 0.0.0.0:4000
+      # Where people reach the console. https makes the cookies Secure
+      # and sends HSTS.
+      GOSINT_SERVER_PUBLIC_URL: ${GOSINT_PUBLIC_URL:?set GOSINT_PUBLIC_URL to the console URL}
+      # The proxy in front, so the sign-in limiter sees the client
+      # address and not the proxy's. Space separated addresses or CIDRs.
+      GOSINT_SERVER_TRUSTED_PROXIES: ${GOSINT_TRUSTED_PROXIES:-172.16.0.0/12}
+      GOSINT_LOGGING_LEVEL: info
+      GOSINT_LOGGING_FORMAT: json
+      GOSINT_LOGGING_COLOR: "false"
+      # Unattended unseal, the data is then only as safe as the file.
+      # GOSINT_VAULT_UNSEAL_KEY_FILE: /run/secrets/unseal_key
+    # secrets:
+    #   - unseal_key
+    ports:
+      # Loopback only, the reverse proxy on this host forwards to it.
+      - "127.0.0.1:${GOSINT_PORT:-4000}:4000"
+    volumes:
+      - gosint-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    # Time to hand running scans back to the queue on shutdown.
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "5"
+
+volumes:
+  gosint-data:
+
+# secrets:
+#   unseal_key:
+#     file: ./unseal_key

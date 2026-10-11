@@ -1,0 +1,163 @@
+# Gosint, Copyright (c) 2026 YouSysAdmin
+#
+# Run `task` with no arguments for the list. Install go-task from
+# https://taskfile.dev.
+#
+# `dir` is a TASK-level attribute: go-task accepts it on a single cmd
+# and silently ignores it there.
+version: '3'
+
+vars:
+  VERSION:
+    sh: 'echo "${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo devel)}"'
+  LDFLAGS: '-s -w -X github.com/yousysadmin/gosint/pkg.Version={{.VERSION}}'
+
+  # Dev postgres from compose.dev.yaml, plus the gosint_test database.
+  PG_PORT: '{{.GOSINT_PG_PORT | default "5434"}}'
+  DEV_DSN: 'postgres://gosint:gosint@localhost:{{.PG_PORT}}/gosint?sslmode=disable'
+  DEV_TEST_DSN: 'postgres://gosint:gosint@localhost:{{.PG_PORT}}/gosint_test?sslmode=disable'
+
+tasks:
+  default:
+    desc: List the tasks
+    silent: true
+    cmds:
+      - task --list
+
+  # Sequential cmds rather than deps: deps run in parallel and the
+  # binary embeds what web produces.
+  build:
+    desc: Console plus the binary (bin/gosint)
+    cmds:
+      - task: web
+      - task: binary
+
+  # npm run build empties web/dist, which deletes the committed .gitkeep
+  # that lets a plain `go build` compile. Put it back.
+  web:
+    desc: Build the console into web/dist
+    dir: web
+    cmds:
+      - npm ci
+      - npm run build
+      - touch dist/.gitkeep
+
+  binary:
+    desc: Build bin/gosint from whatever is in web/dist
+    env:
+      CGO_ENABLED: '0'
+    cmds:
+      - go build -ldflags "{{.LDFLAGS}}" -o bin/gosint ./cmd/gosint
+
+  dev-up:
+    desc: Start the dev postgres on :5434 and wait until it answers
+    cmds:
+      - docker compose -f compose.dev.yaml up -d --wait
+
+  dev-down:
+    desc: Stop the dev stack, keeping the data in dev-data
+    cmds:
+      - docker compose -f compose.dev.yaml down
+
+  run:
+    desc: Run against a local sqlite file in data/ (:4000)
+    env:
+      GOSINT_LOGGING_FORMAT: text
+    cmds:
+      - go run ./cmd/gosint serve
+
+  run-pg:
+    desc: Run against the dev postgres (:4000)
+    env:
+      GOSINT_DATABASE_DRIVER: postgres
+      GOSINT_DATABASE_DSN: '{{.DEV_DSN}}'
+      GOSINT_LOGGING_FORMAT: text
+    cmds:
+      - go run ./cmd/gosint serve
+
+  web-dev:
+    desc: Vite dev server on :5173, proxying /api to :4000
+    dir: web
+    cmds:
+      - npm run dev
+
+  test:
+    desc: Go tests - sqlite always, postgres SKIPS without a database, see test-db
+    cmds:
+      - go test -race -shuffle=on ./...
+
+  test-db:
+    desc: Go tests on both backends, postgres against gosint_test
+    env:
+      GOSINT_TEST_PG_DSN: '{{.DEV_TEST_DSN}}'
+    cmds:
+      - go test -race -shuffle=on -count=1 ./...
+
+  cover:
+    desc: Coverage over every package, counted where the code lives, not where the test does
+    cmds:
+      - go test -coverpkg=./... -coverprofile=cover.out ./...
+      - go tool cover -func=cover.out | tail -1
+
+  tidy:
+    desc: Fail when go.mod or go.sum would change under go mod tidy
+    cmds:
+      - go mod tidy -diff
+
+  vuln:
+    desc: Known vulnerabilities reachable from the code (govulncheck, needs the network)
+    cmds:
+      - go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  vet:
+    desc: go vet
+    cmds:
+      - go vet ./...
+
+  fmt:
+    desc: List unformatted Go files (fails when there are any)
+    cmds:
+      - test -z "$(gofmt -l cmd internal migrations pkg web)"
+
+  lint:
+    desc: golangci-lint
+    cmds:
+      - golangci-lint run ./...
+
+  type-check:
+    desc: vue-tsc over the console
+    dir: web
+    cmds:
+      - npm run type-check
+
+  format-check:
+    desc: prettier over the console (npm run format writes)
+    dir: web
+    cmds:
+      - npm run format-check
+
+  web-check:
+    desc: Compile the console, which catches what vue-tsc does not (a template that does not compile)
+    dir: web
+    cmds:
+      - npm run build
+      - touch dist/.gitkeep
+
+  check-web:
+    desc: The console alone (type-check, format, build), for a change that touches no Go
+    cmds:
+      - task: type-check
+      - task: format-check
+      - task: web-check
+
+  check:
+    desc: vet, lint, tests, gofmt, plus the console type-check and format
+    cmds:
+      - task: vet
+      - task: lint
+      - task: test
+      - task: fmt
+      - task: tidy
+      - task: type-check
+      - task: format-check
+      - task: web-check

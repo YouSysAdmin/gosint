@@ -1,0 +1,1861 @@
+{
+ "gosint": "sketch",
+ "version": 1,
+ "sketch": {
+  "title": "Example Corp external exposure",
+  "description": "Perimeter of example.com with the people behind it."
+ },
+ "nodes": [
+  {
+   "id": "n1",
+   "type": "organization",
+   "label": "Example Corp",
+   "properties": {
+    "employees": 240,
+    "founded": "2009",
+    "industry": "Software",
+    "name": "Example Corp",
+    "website": "https://www.example.com/",
+    "country": "US"
+   },
+   "x": 100.0,
+   "y": 182.5
+  },
+  {
+   "id": "n2",
+   "type": "location",
+   "label": "1 Example Plaza, San Francisco, US",
+   "properties": {
+    "city": "San Francisco",
+    "country": "US",
+    "latitude": 37.7897,
+    "longitude": -122.3972,
+    "address": "1 Example Plaza"
+   },
+   "x": 67.9,
+   "y": 178.7
+  },
+  {
+   "id": "n3",
+   "type": "asn",
+   "label": "AS64496 - EXAMPLE-NET",
+   "properties": {
+    "asn_str": "AS64496",
+    "cidrs": [],
+    "country": "US",
+    "name": "EXAMPLE-NET",
+    "number": 64496
+   },
+   "x": 111.6,
+   "y": 128.6
+  },
+  {
+   "id": "n4",
+   "type": "cidr",
+   "label": "203.0.113.0/24",
+   "properties": {
+    "network": "203.0.113.0/24"
+   },
+   "x": 138.8,
+   "y": 69.2
+  },
+  {
+   "id": "n5",
+   "type": "domain",
+   "label": "example.com",
+   "properties": {
+    "alive": true,
+    "domain": "example.com",
+    "http_status": 200,
+    "root": true
+   },
+   "x": 170.0,
+   "y": 43.7
+  },
+  {
+   "id": "n6",
+   "type": "whois",
+   "label": "example.com - Example Corp",
+   "properties": {
+    "organization": {
+     "name": "Example Corp"
+    },
+    "registrar": "Example Registrar LLC",
+    "country": "US",
+    "creation_date": "2009-03-12",
+    "domain": {
+     "domain": "example.com",
+     "root": true
+    }
+   },
+   "x": 189.8,
+   "y": 13.8
+  },
+  {
+   "id": "n7",
+   "type": "domain",
+   "label": "www.example.com",
+   "properties": {
+    "root": false,
+    "alive": true,
+    "domain": "www.example.com",
+    "http_status": 200
+   },
+   "x": 254.5,
+   "y": 51.0
+  },
+  {
+   "id": "n8",
+   "type": "ip",
+   "label": "203.0.113.10",
+   "properties": {
+    "city": "San Francisco",
+    "country": "US",
+    "isp": "Example Corp",
+    "address": "203.0.113.10",
+    "cdn": ""
+   },
+   "x": 195.6,
+   "y": 36.0
+  },
+  {
+   "id": "n9",
+   "type": "domain",
+   "label": "mail.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "mail.example.com",
+    "http_status": null,
+    "root": false
+   },
+   "x": 191.6,
+   "y": -4.9
+  },
+  {
+   "id": "n10",
+   "type": "ip",
+   "label": "203.0.113.25",
+   "properties": {
+    "city": "San Francisco",
+    "country": "US",
+    "isp": "Example Corp",
+    "address": "203.0.113.25",
+    "cdn": ""
+   },
+   "x": 226.6,
+   "y": 11.5
+  },
+  {
+   "id": "n11",
+   "type": "domain",
+   "label": "vpn.example.com",
+   "properties": {
+    "root": false,
+    "alive": true,
+    "domain": "vpn.example.com",
+    "http_status": 403
+   },
+   "flag": "yellow",
+   "x": 117.0,
+   "y": 11.1
+  },
+  {
+   "id": "n12",
+   "type": "ip",
+   "label": "203.0.113.40",
+   "properties": {
+    "address": "203.0.113.40",
+    "cdn": "",
+    "city": "San Francisco",
+    "country": "US",
+    "isp": "Example Corp"
+   },
+   "x": 84.7,
+   "y": 26.4
+  },
+  {
+   "id": "n13",
+   "type": "domain",
+   "label": "api.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "api.example.com",
+    "http_status": 200,
+    "root": false
+   },
+   "x": 146.7,
+   "y": 3.9
+  },
+  {
+   "id": "n14",
+   "type": "ip",
+   "label": "203.0.113.11",
+   "properties": {
+    "country": "US",
+    "isp": "Example Corp",
+    "address": "203.0.113.11",
+    "cdn": "",
+    "city": "San Francisco"
+   },
+   "x": 113.2,
+   "y": 30.3
+  },
+  {
+   "id": "n15",
+   "type": "domain",
+   "label": "staging.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "staging.example.com",
+    "http_status": 401,
+    "root": false
+   },
+   "flag": "yellow",
+   "x": 153.5,
+   "y": 93.0
+  },
+  {
+   "id": "n16",
+   "type": "ip",
+   "label": "203.0.113.57",
+   "properties": {
+    "country": "US",
+    "isp": "Example Corp",
+    "address": "203.0.113.57",
+    "cdn": "",
+    "city": "San Francisco"
+   },
+   "x": 181.7,
+   "y": 122.4
+  },
+  {
+   "id": "n17",
+   "type": "domain",
+   "label": "git.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "git.example.com",
+    "http_status": 200,
+    "root": false
+   },
+   "x": 160.3,
+   "y": 75.2
+  },
+  {
+   "id": "n18",
+   "type": "ip",
+   "label": "203.0.113.60",
+   "properties": {
+    "address": "203.0.113.60",
+    "cdn": "",
+    "city": "San Francisco",
+    "country": "US",
+    "isp": "Example Corp"
+   },
+   "x": 183.0,
+   "y": 63.3
+  },
+  {
+   "id": "n19",
+   "type": "domain",
+   "label": "jenkins.example.com",
+   "properties": {
+    "root": false,
+    "alive": true,
+    "domain": "jenkins.example.com",
+    "http_status": 403
+   },
+   "flag": "yellow",
+   "x": 217.3,
+   "y": 112.8
+  },
+  {
+   "id": "n20",
+   "type": "ip",
+   "label": "203.0.113.61",
+   "properties": {
+    "isp": "Example Corp",
+    "address": "203.0.113.61",
+    "cdn": "",
+    "city": "San Francisco",
+    "country": "US"
+   },
+   "x": 222.7,
+   "y": 78.5
+  },
+  {
+   "id": "n21",
+   "type": "domain",
+   "label": "old.example.com",
+   "properties": {
+    "root": false,
+    "alive": false,
+    "domain": "old.example.com",
+    "http_status": null
+   },
+   "flag": "red",
+   "x": 172.1,
+   "y": 6.4
+  },
+  {
+   "id": "n22",
+   "type": "domain",
+   "label": "dev.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "dev.example.com",
+    "http_status": 404,
+    "root": false
+   },
+   "flag": "yellow",
+   "x": 134.3,
+   "y": 17.6
+  },
+  {
+   "id": "n23",
+   "type": "ip",
+   "label": "203.0.113.58",
+   "properties": {
+    "country": "US",
+    "isp": "Example Corp",
+    "address": "203.0.113.58",
+    "cdn": "",
+    "city": "San Francisco"
+   },
+   "x": 100.0,
+   "y": 44.6
+  },
+  {
+   "id": "n24",
+   "type": "domain",
+   "label": "cdn.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "cdn.example.com",
+    "http_status": 200,
+    "root": false
+   },
+   "x": 139.8,
+   "y": -13.2
+  },
+  {
+   "id": "n25",
+   "type": "ip",
+   "label": "198.51.100.77",
+   "properties": {
+    "isp": "Cloud Hosting Inc",
+    "address": "198.51.100.77",
+    "cdn": "fastly",
+    "city": "San Francisco",
+    "country": "US"
+   },
+   "flag": "yellow",
+   "x": 116.3,
+   "y": -47.3
+  },
+  {
+   "id": "n26",
+   "type": "domain",
+   "label": "mx2.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "mx2.example.com",
+    "http_status": null,
+    "root": false
+   },
+   "x": 164.7,
+   "y": -16.7
+  },
+  {
+   "id": "n27",
+   "type": "ip",
+   "label": "203.0.113.26",
+   "properties": {
+    "cdn": "",
+    "city": "San Francisco",
+    "country": "US",
+    "isp": "Example Corp",
+    "address": "203.0.113.26"
+   },
+   "x": 152.3,
+   "y": 21.5
+  },
+  {
+   "id": "n28",
+   "type": "domain",
+   "label": "ns1.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "ns1.example.com",
+    "http_status": null,
+    "root": false
+   },
+   "x": 202.8,
+   "y": 60.5
+  },
+  {
+   "id": "n29",
+   "type": "ip",
+   "label": "203.0.113.2",
+   "properties": {
+    "city": "San Francisco",
+    "country": "US",
+    "isp": "Example Corp",
+    "address": "203.0.113.2",
+    "cdn": ""
+   },
+   "x": 170.5,
+   "y": 105.7
+  },
+  {
+   "id": "n30",
+   "type": "domain",
+   "label": "ns2.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "ns2.example.com",
+    "http_status": null,
+    "root": false
+   },
+   "x": 178.4,
+   "y": 82.8
+  },
+  {
+   "id": "n31",
+   "type": "ip",
+   "label": "203.0.113.3",
+   "properties": {
+    "country": "US",
+    "isp": "Example Corp",
+    "address": "203.0.113.3",
+    "cdn": "",
+    "city": "San Francisco"
+   },
+   "x": 135.9,
+   "y": 114.7
+  },
+  {
+   "id": "n32",
+   "type": "domain",
+   "label": "grafana.example.com",
+   "properties": {
+    "root": false,
+    "alive": true,
+    "domain": "grafana.example.com",
+    "http_status": 200
+   },
+   "x": 115.5,
+   "y": 63.2
+  },
+  {
+   "id": "n33",
+   "type": "ip",
+   "label": "203.0.113.62",
+   "properties": {
+    "address": "203.0.113.62",
+    "cdn": "",
+    "city": "San Francisco",
+    "country": "US",
+    "isp": "Example Corp"
+   },
+   "x": 72.0,
+   "y": 76.0
+  },
+  {
+   "id": "n34",
+   "type": "domain",
+   "label": "wiki.example.com",
+   "properties": {
+    "http_status": 200,
+    "root": false,
+    "alive": true,
+    "domain": "wiki.example.com"
+   },
+   "x": 126.5,
+   "y": 48.4
+  },
+  {
+   "id": "n35",
+   "type": "ip",
+   "label": "203.0.113.63",
+   "properties": {
+    "country": "US",
+    "isp": "Example Corp",
+    "address": "203.0.113.63",
+    "cdn": "",
+    "city": "San Francisco"
+   },
+   "x": 98.3,
+   "y": 76.5
+  },
+  {
+   "id": "n36",
+   "type": "domain",
+   "label": "shop.example.com",
+   "properties": {
+    "alive": true,
+    "domain": "shop.example.com",
+    "http_status": 200,
+    "root": false
+   },
+   "x": 237.3,
+   "y": 92.7
+  },
+  {
+   "id": "n37",
+   "type": "ip",
+   "label": "198.51.100.12",
+   "properties": {
+    "city": "San Francisco",
+    "country": "US",
+    "isp": "Cloud Hosting Inc",
+    "address": "198.51.100.12",
+    "cdn": ""
+   },
+   "x": 262.7,
+   "y": 120.6
+  },
+  {
+   "id": "n38",
+   "type": "port",
+   "label": "443 https (tcp)",
+   "properties": {
+    "banner": "GitLab",
+    "number": 443,
+    "protocol": "tcp",
+    "service": "https",
+    "state": "open"
+   },
+   "x": 142.1,
+   "y": 37.5
+  },
+  {
+   "id": "n39",
+   "type": "port",
+   "label": "80 http (tcp)",
+   "properties": {
+    "banner": "nginx/1.24",
+    "number": 80,
+    "protocol": "tcp",
+    "service": "http",
+    "state": "open"
+   },
+   "x": 212.5,
+   "y": -1.2
+  },
+  {
+   "id": "n40",
+   "type": "port",
+   "label": "25 smtp (tcp)",
+   "properties": {
+    "banner": "Postfix",
+    "number": 25,
+    "protocol": "tcp",
+    "service": "smtp",
+    "state": "open"
+   },
+   "x": 256.3,
+   "y": -14.4
+  },
+  {
+   "id": "n41",
+   "type": "port",
+   "label": "587 submission (tcp)",
+   "properties": {
+    "state": "open",
+    "banner": "Postfix",
+    "number": 587,
+    "protocol": "tcp",
+    "service": "submission"
+   },
+   "x": 242.3,
+   "y": -24.7
+  },
+  {
+   "id": "n42",
+   "type": "port",
+   "label": "993 imaps (tcp)",
+   "properties": {
+    "banner": "Dovecot",
+    "number": 993,
+    "protocol": "tcp",
+    "service": "imaps",
+    "state": "open"
+   },
+   "x": 263.7,
+   "y": 0.7
+  },
+  {
+   "id": "n43",
+   "type": "port",
+   "label": "1194 openvpn (tcp)",
+   "properties": {
+    "banner": "",
+    "number": 1194,
+    "protocol": "tcp",
+    "service": "openvpn",
+    "state": "open"
+   },
+   "x": 48.8,
+   "y": 11.3
+  },
+  {
+   "id": "n44",
+   "type": "port",
+   "label": "8080 http (tcp)",
+   "properties": {
+    "state": "open",
+    "banner": "Jetty 9.4",
+    "number": 8080,
+    "protocol": "tcp",
+    "service": "http"
+   },
+   "x": 227.1,
+   "y": 129.0
+  },
+  {
+   "id": "n45",
+   "type": "port",
+   "label": "22 ssh (tcp)",
+   "properties": {
+    "number": 22,
+    "protocol": "tcp",
+    "service": "ssh",
+    "state": "open",
+    "banner": "OpenSSH 7.4"
+   },
+   "x": 206.2,
+   "y": 96.6
+  },
+  {
+   "id": "n46",
+   "type": "port",
+   "label": "3000 http (tcp)",
+   "properties": {
+    "service": "http",
+    "state": "open",
+    "banner": "Grafana 9.5",
+    "number": 3000,
+    "protocol": "tcp"
+   },
+   "x": 34.7,
+   "y": 68.3
+  },
+  {
+   "id": "n47",
+   "type": "port",
+   "label": "53 domain (tcp)",
+   "properties": {
+    "protocol": "tcp",
+    "service": "domain",
+    "state": "open",
+    "banner": "BIND 9.18",
+    "number": 53
+   },
+   "x": 156.8,
+   "y": 148.4
+  },
+  {
+   "id": "n48",
+   "type": "website",
+   "label": "https://www.example.com/",
+   "properties": {
+    "technologies": [],
+    "title": "Example Corp - Software that scales",
+    "url": "https://www.example.com/",
+    "active": true,
+    "redirects": []
+   },
+   "x": 329.3,
+   "y": 93.4
+  },
+  {
+   "id": "n49",
+   "type": "technology",
+   "label": "nginx 1.24",
+   "properties": {
+    "name": "nginx",
+    "version": "1.24"
+   },
+   "x": 357.8,
+   "y": 116.7
+  },
+  {
+   "id": "n50",
+   "type": "technology",
+   "label": "React 18.2",
+   "properties": {
+    "version": "18.2",
+    "name": "React"
+   },
+   "x": 364.3,
+   "y": 101.2
+  },
+  {
+   "id": "n51",
+   "type": "technology",
+   "label": "Cloudflare Turnstile",
+   "properties": {
+    "name": "Cloudflare Turnstile",
+    "version": ""
+   },
+   "x": 362.0,
+   "y": 82.0
+  },
+  {
+   "id": "n52",
+   "type": "technology",
+   "label": "Google Analytics GA4",
+   "properties": {
+    "name": "Google Analytics",
+    "version": "GA4"
+   },
+   "x": 344.4,
+   "y": 126.8
+  },
+  {
+   "id": "n53",
+   "type": "sslcertificate",
+   "label": "CN=*.example.com",
+   "properties": {
+    "san_domains": [
+     "example.com",
+     "*.example.com"
+    ],
+    "subject": "CN=*.example.com",
+    "valid_from": "2026-08-01",
+    "valid_until": "2026-10-30",
+    "issuer": "Let's Encrypt R11"
+   },
+   "x": 291.1,
+   "y": 41.5
+  },
+  {
+   "id": "n54",
+   "type": "website",
+   "label": "https://git.example.com/",
+   "properties": {
+    "redirects": [],
+    "technologies": [],
+    "title": "GitLab",
+    "url": "https://git.example.com/",
+    "active": true
+   },
+   "x": 154.9,
+   "y": 115.0
+  },
+  {
+   "id": "n55",
+   "type": "gitrepo",
+   "label": "example-corp/infra-ansible",
+   "properties": {
+    "visibility": "public",
+    "host": "github.com",
+    "name": "infra-ansible",
+    "owner": "example-corp",
+    "url": "https://github.com/example-corp/infra-ansible"
+   },
+   "x": 112.0,
+   "y": 224.6
+  },
+  {
+   "id": "n56",
+   "type": "website",
+   "label": "http://jenkins.example.com:8080/",
+   "properties": {
+    "title": "Jenkins",
+    "url": "http://jenkins.example.com:8080/",
+    "active": true,
+    "redirects": [],
+    "technologies": []
+   },
+   "x": 258.4,
+   "y": 176.1
+  },
+  {
+   "id": "n57",
+   "type": "finding",
+   "label": "Jenkins script console reachable without login @ jenkins.example.com:8080/script",
+   "properties": {
+    "title": "Jenkins script console reachable without login",
+    "location": "http://jenkins.example.com:8080/script",
+    "rule": "jenkins-script-console",
+    "severity": "critical",
+    "source": "nuclei",
+    "status": "confirmed"
+   },
+   "flag": "red",
+   "x": 292.8,
+   "y": 223.4
+  },
+  {
+   "id": "n58",
+   "type": "finding",
+   "label": "Outdated OpenSSH 7.4 @ 203.0.113.61:22",
+   "properties": {
+    "location": "203.0.113.61:22",
+    "rule": "ssh-version",
+    "severity": "medium",
+    "source": "nmap",
+    "status": "unverified",
+    "title": "Outdated OpenSSH 7.4"
+   },
+   "flag": "yellow",
+   "x": 262.2,
+   "y": 80.3
+  },
+  {
+   "id": "n59",
+   "type": "finding",
+   "label": "Grafana default admin password @ grafana.example.com:3000",
+   "properties": {
+    "location": "http://grafana.example.com:3000",
+    "severity": "high",
+    "source": "manual",
+    "status": "investigating",
+    "title": "Grafana default admin password"
+   },
+   "flag": "orange",
+   "x": 37.1,
+   "y": 88.2
+  },
+  {
+   "id": "n60",
+   "type": "vulnerability",
+   "label": "Jenkins arbitrary file read on jenkins.example.com @ jenkins.example.com",
+   "properties": {
+    "name": "Jenkins arbitrary file read on jenkins.example.com",
+    "severity": "critical",
+    "status": "open",
+    "affected": "jenkins.example.com",
+    "cve": "CVE-2024-23897",
+    "cvss": 9.8
+   },
+   "flag": "red",
+   "x": 325.6,
+   "y": 244.5
+  },
+  {
+   "id": "n61",
+   "type": "individual",
+   "label": "Jane Doe",
+   "properties": {
+    "job_title": "CTO",
+    "employer": "Example Corp",
+    "full_name": "Jane Doe"
+   },
+   "x": 26.4,
+   "y": 171.2
+  },
+  {
+   "id": "n62",
+   "type": "email",
+   "label": "jane.doe@example.com",
+   "properties": {
+    "email": "jane.doe@example.com"
+   },
+   "x": -0.1,
+   "y": 147.4
+  },
+  {
+   "id": "n63",
+   "type": "username",
+   "label": "jane.doe",
+   "properties": {
+    "value": "jane.doe"
+   },
+   "x": -21.3,
+   "y": 178.9
+  },
+  {
+   "id": "n64",
+   "type": "socialaccount",
+   "label": "jane.doe@linkedin",
+   "properties": {
+    "id": "jane.doe@linkedin",
+    "platform": "linkedin",
+    "profile_url": "https://linkedin.com/in/jane.doe",
+    "username": {
+     "value": "jane.doe"
+    }
+   },
+   "x": -56.0,
+   "y": 182.5
+  },
+  {
+   "id": "n65",
+   "type": "individual",
+   "label": "Mark Ellison",
+   "properties": {
+    "employer": "Example Corp",
+    "full_name": "Mark Ellison",
+    "job_title": "DevOps lead"
+   },
+   "x": 129.1,
+   "y": 245.3
+  },
+  {
+   "id": "n66",
+   "type": "email",
+   "label": "mark.ellison@example.com",
+   "properties": {
+    "email": "mark.ellison@example.com"
+   },
+   "x": 105.1,
+   "y": 291.5
+  },
+  {
+   "id": "n67",
+   "type": "username",
+   "label": "mark.ellison",
+   "properties": {
+    "value": "mark.ellison"
+   },
+   "x": 183.0,
+   "y": 265.6
+  },
+  {
+   "id": "n68",
+   "type": "socialaccount",
+   "label": "mark.ellison@github",
+   "properties": {
+    "id": "mark.ellison@github",
+    "platform": "github",
+    "profile_url": "https://github.com/mark.ellison",
+    "username": {
+     "value": "mark.ellison"
+    }
+   },
+   "x": 210.9,
+   "y": 288.1
+  },
+  {
+   "id": "n69",
+   "type": "socialaccount",
+   "label": "mark.ellison@linkedin",
+   "properties": {
+    "profile_url": "https://linkedin.com/in/mark.ellison",
+    "username": {
+     "value": "mark.ellison"
+    },
+    "id": "mark.ellison@linkedin",
+    "platform": "linkedin"
+   },
+   "x": 218.3,
+   "y": 270.0
+  },
+  {
+   "id": "n70",
+   "type": "individual",
+   "label": "Priya Natarajan",
+   "properties": {
+    "employer": "Example Corp",
+    "full_name": "Priya Natarajan",
+    "job_title": "Security engineer"
+   },
+   "x": 46.9,
+   "y": 202.9
+  },
+  {
+   "id": "n71",
+   "type": "email",
+   "label": "priya.n@example.com",
+   "properties": {
+    "email": "priya.n@example.com"
+   },
+   "x": 20.4,
+   "y": 222.5
+  },
+  {
+   "id": "n72",
+   "type": "username",
+   "label": "priya.n",
+   "properties": {
+    "value": "priya.n"
+   },
+   "x": 0.6,
+   "y": 221.6
+  },
+  {
+   "id": "n73",
+   "type": "socialaccount",
+   "label": "priya.n@linkedin",
+   "properties": {
+    "id": "priya.n@linkedin",
+    "platform": "linkedin",
+    "profile_url": "https://linkedin.com/in/priya.n",
+    "username": {
+     "value": "priya.n"
+    }
+   },
+   "x": -29.7,
+   "y": 240.0
+  },
+  {
+   "id": "n74",
+   "type": "individual",
+   "label": "Tom Becker",
+   "properties": {
+    "employer": "Example Corp",
+    "full_name": "Tom Becker",
+    "job_title": "Backend developer"
+   },
+   "x": 125.6,
+   "y": 265.9
+  },
+  {
+   "id": "n75",
+   "type": "email",
+   "label": "tbecker@example.com",
+   "properties": {
+    "email": "tbecker@example.com"
+   },
+   "x": 124.3,
+   "y": 321.9
+  },
+  {
+   "id": "n76",
+   "type": "username",
+   "label": "tbecker",
+   "properties": {
+    "value": "tbecker"
+   },
+   "x": 166.3,
+   "y": 305.9
+  },
+  {
+   "id": "n77",
+   "type": "socialaccount",
+   "label": "tbecker@github",
+   "properties": {
+    "id": "tbecker@github",
+    "platform": "github",
+    "profile_url": "https://github.com/tbecker",
+    "username": {
+     "value": "tbecker"
+    }
+   },
+   "x": 183.8,
+   "y": 336.7
+  },
+  {
+   "id": "n78",
+   "type": "socialaccount",
+   "label": "tbecker@linkedin",
+   "properties": {
+    "id": "tbecker@linkedin",
+    "platform": "linkedin",
+    "profile_url": "https://linkedin.com/in/tbecker",
+    "username": {
+     "value": "tbecker"
+    }
+   },
+   "x": 198.5,
+   "y": 322.4
+  },
+  {
+   "id": "n79",
+   "type": "individual",
+   "label": "Alicia Gomez",
+   "properties": {
+    "full_name": "Alicia Gomez",
+    "job_title": "Head of sales",
+    "employer": "Example Corp"
+   },
+   "x": 68.5,
+   "y": 226.9
+  },
+  {
+   "id": "n80",
+   "type": "email",
+   "label": "agomez@example.com",
+   "properties": {
+    "email": "agomez@example.com"
+   },
+   "x": 60.7,
+   "y": 259.3
+  },
+  {
+   "id": "n81",
+   "type": "username",
+   "label": "agomez",
+   "properties": {
+    "value": "agomez"
+   },
+   "x": 36.2,
+   "y": 261.6
+  },
+  {
+   "id": "n82",
+   "type": "socialaccount",
+   "label": "agomez@linkedin",
+   "properties": {
+    "id": "agomez@linkedin",
+    "platform": "linkedin",
+    "profile_url": "https://linkedin.com/in/agomez",
+    "username": {
+     "value": "agomez"
+    }
+   },
+   "x": 13.8,
+   "y": 288.6
+  },
+  {
+   "id": "n83",
+   "type": "phone",
+   "label": "+14155550142",
+   "properties": {
+    "number": "+14155550142",
+    "country": "US"
+   },
+   "x": -7.8,
+   "y": 164.5
+  },
+  {
+   "id": "n84",
+   "type": "breach",
+   "label": "DevForum 2024",
+   "properties": {
+    "breachdate": "2024-06-11",
+    "dataclasses": [
+     "Email addresses",
+     "Passwords",
+     "Usernames"
+    ],
+    "name": "DevForum 2024",
+    "pwncount": 1200000
+   },
+   "x": 89.2,
+   "y": 333.0
+  },
+  {
+   "id": "n85",
+   "type": "device",
+   "label": "DESKTOP-TB-2025-03-14",
+   "properties": {
+    "os": "Windows 11",
+    "type": "laptop",
+    "device_id": "DESKTOP-TB-2025-03-14"
+   },
+   "x": 139.5,
+   "y": 360.9
+  },
+  {
+   "id": "n86",
+   "type": "malware",
+   "label": "RedLine (infostealer)",
+   "properties": {
+    "family": "infostealer",
+    "name": "RedLine",
+    "type": "stealer"
+   },
+   "flag": "red",
+   "x": 160.1,
+   "y": 387.4
+  },
+  {
+   "id": "n87",
+   "type": "cryptowallet",
+   "label": "ETH 0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+   "properties": {
+    "address": "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    "currency": "ETH"
+   },
+   "x": 140.2,
+   "y": 294.8
+  },
+  {
+   "id": "n88",
+   "type": "website",
+   "label": "https://shop.example.com/",
+   "properties": {
+    "redirects": [],
+    "technologies": [],
+    "title": "Example Store",
+    "url": "https://shop.example.com/",
+    "active": true
+   },
+   "x": 283.9,
+   "y": 126.1
+  },
+  {
+   "id": "n89",
+   "type": "webtracker",
+   "label": "Google Analytics-G-EXAMPLE123",
+   "properties": {
+    "name": "Google Analytics",
+    "tracker_id": "G-EXAMPLE123",
+    "company": "Google"
+   },
+   "x": 322.8,
+   "y": 133.6
+  },
+  {
+   "id": "n90",
+   "type": "credential",
+   "label": "AKIAIOSFODNN7EXAMPLE@aws",
+   "properties": {
+    "username": "AKIAIOSFODNN7EXAMPLE",
+    "value": "AKIAIOSFODNN7EXAMPLE",
+    "fingerprint": "1a5d44a2dca1",
+    "kind": "api_key",
+    "prefix": "AKIA",
+    "service": "aws"
+   },
+   "flag": "red",
+   "x": 145.3,
+   "y": 229.2
+  },
+  {
+   "id": "n91",
+   "type": "cve",
+   "label": "CVE-2024-23897",
+   "properties": {
+    "description": "Jenkins CLI arbitrary file read",
+    "id": "CVE-2024-23897",
+    "known_exploited": true,
+    "severity": "critical",
+    "cvss": 9.8
+   },
+   "x": 302.0,
+   "y": 262.1
+  },
+  {
+   "id": "n92",
+   "type": "credential",
+   "label": "mark.ellison@example.com@DevForum 2024",
+   "properties": {
+    "username": "mark.ellison@example.com",
+    "kind": "password",
+    "password": "Summer2023!",
+    "service": "DevForum 2024"
+   },
+   "flag": "red",
+   "x": 60.2,
+   "y": 349.6
+  },
+  {
+   "id": "n93",
+   "type": "credential",
+   "label": "tbecker@example.com@DevForum 2024",
+   "properties": {
+    "kind": "password",
+    "password": "tom1234",
+    "service": "DevForum 2024",
+    "username": "tbecker@example.com"
+   },
+   "flag": "red",
+   "x": 83.4,
+   "y": 365.8
+  }
+ ],
+ "edges": [
+  {
+   "source": "n1",
+   "target": "n2",
+   "label": "HEADQUARTERED_AT"
+  },
+  {
+   "source": "n1",
+   "target": "n3",
+   "label": "OWNS_ASN"
+  },
+  {
+   "source": "n3",
+   "target": "n4",
+   "label": "ANNOUNCES"
+  },
+  {
+   "source": "n1",
+   "target": "n5",
+   "label": "OWNS_DOMAIN"
+  },
+  {
+   "source": "n5",
+   "target": "n6",
+   "label": "HAS_WHOIS"
+  },
+  {
+   "source": "n5",
+   "target": "n7",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n7",
+   "target": "n8",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n9",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n9",
+   "target": "n10",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n11",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n11",
+   "target": "n12",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n13",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n13",
+   "target": "n14",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n15",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n15",
+   "target": "n16",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n17",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n17",
+   "target": "n18",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n19",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n19",
+   "target": "n20",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n21",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n5",
+   "target": "n22",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n22",
+   "target": "n23",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n24",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n24",
+   "target": "n25",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n26",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n26",
+   "target": "n27",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n28",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n28",
+   "target": "n29",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n30",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n30",
+   "target": "n31",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n32",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n32",
+   "target": "n33",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n34",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n34",
+   "target": "n35",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n5",
+   "target": "n36",
+   "label": "HAS_SUBDOMAIN"
+  },
+  {
+   "source": "n36",
+   "target": "n37",
+   "label": "RESOLVES_TO"
+  },
+  {
+   "source": "n4",
+   "target": "n8",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n10",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n12",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n14",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n16",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n18",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n20",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n23",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n27",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n29",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n31",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n33",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n4",
+   "target": "n35",
+   "label": "CONTAINS"
+  },
+  {
+   "source": "n9",
+   "target": "n26",
+   "label": "HAS_MX",
+   "properties": {
+    "priority": 20
+   }
+  },
+  {
+   "source": "n5",
+   "target": "n9",
+   "label": "HAS_MX",
+   "properties": {
+    "priority": 10
+   }
+  },
+  {
+   "source": "n5",
+   "target": "n28",
+   "label": "HAS_NS"
+  },
+  {
+   "source": "n5",
+   "target": "n30",
+   "label": "HAS_NS"
+  },
+  {
+   "source": "n8",
+   "target": "n38",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n8",
+   "target": "n39",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n10",
+   "target": "n40",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n10",
+   "target": "n41",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n10",
+   "target": "n42",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n12",
+   "target": "n38",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n12",
+   "target": "n43",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n16",
+   "target": "n44",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n16",
+   "target": "n45",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n18",
+   "target": "n45",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n18",
+   "target": "n38",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n20",
+   "target": "n44",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n20",
+   "target": "n45",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n33",
+   "target": "n46",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n29",
+   "target": "n47",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n31",
+   "target": "n47",
+   "label": "HAS_PORT"
+  },
+  {
+   "source": "n7",
+   "target": "n48",
+   "label": "HAS_WEBSITE"
+  },
+  {
+   "source": "n48",
+   "target": "n49",
+   "label": "USES_TECHNOLOGY"
+  },
+  {
+   "source": "n48",
+   "target": "n50",
+   "label": "USES_TECHNOLOGY"
+  },
+  {
+   "source": "n48",
+   "target": "n51",
+   "label": "USES_TECHNOLOGY"
+  },
+  {
+   "source": "n48",
+   "target": "n52",
+   "label": "USES_TECHNOLOGY"
+  },
+  {
+   "source": "n7",
+   "target": "n53",
+   "label": "HAS_CERTIFICATE"
+  },
+  {
+   "source": "n17",
+   "target": "n54",
+   "label": "HAS_WEBSITE"
+  },
+  {
+   "source": "n1",
+   "target": "n55",
+   "label": "HAS_REPOSITORY"
+  },
+  {
+   "source": "n19",
+   "target": "n56",
+   "label": "HAS_WEBSITE"
+  },
+  {
+   "source": "n56",
+   "target": "n57",
+   "label": "HAS_FINDING"
+  },
+  {
+   "source": "n20",
+   "target": "n58",
+   "label": "HAS_FINDING"
+  },
+  {
+   "source": "n33",
+   "target": "n59",
+   "label": "HAS_FINDING"
+  },
+  {
+   "source": "n57",
+   "target": "n60",
+   "label": "CONFIRMED_AS"
+  },
+  {
+   "source": "n61",
+   "target": "n1",
+   "label": "WORKS_FOR"
+  },
+  {
+   "source": "n61",
+   "target": "n62",
+   "label": "HAS_EMAIL"
+  },
+  {
+   "source": "n61",
+   "target": "n63",
+   "label": "HAS_USERNAME"
+  },
+  {
+   "source": "n63",
+   "target": "n64",
+   "label": "HAS_SOCIAL_ACCOUNT"
+  },
+  {
+   "source": "n65",
+   "target": "n1",
+   "label": "WORKS_FOR"
+  },
+  {
+   "source": "n65",
+   "target": "n66",
+   "label": "HAS_EMAIL"
+  },
+  {
+   "source": "n65",
+   "target": "n67",
+   "label": "HAS_USERNAME"
+  },
+  {
+   "source": "n67",
+   "target": "n68",
+   "label": "HAS_SOCIAL_ACCOUNT"
+  },
+  {
+   "source": "n67",
+   "target": "n69",
+   "label": "HAS_SOCIAL_ACCOUNT"
+  },
+  {
+   "source": "n70",
+   "target": "n1",
+   "label": "WORKS_FOR"
+  },
+  {
+   "source": "n70",
+   "target": "n71",
+   "label": "HAS_EMAIL"
+  },
+  {
+   "source": "n70",
+   "target": "n72",
+   "label": "HAS_USERNAME"
+  },
+  {
+   "source": "n72",
+   "target": "n73",
+   "label": "HAS_SOCIAL_ACCOUNT"
+  },
+  {
+   "source": "n74",
+   "target": "n1",
+   "label": "WORKS_FOR"
+  },
+  {
+   "source": "n74",
+   "target": "n75",
+   "label": "HAS_EMAIL"
+  },
+  {
+   "source": "n74",
+   "target": "n76",
+   "label": "HAS_USERNAME"
+  },
+  {
+   "source": "n76",
+   "target": "n77",
+   "label": "HAS_SOCIAL_ACCOUNT"
+  },
+  {
+   "source": "n76",
+   "target": "n78",
+   "label": "HAS_SOCIAL_ACCOUNT"
+  },
+  {
+   "source": "n79",
+   "target": "n1",
+   "label": "WORKS_FOR"
+  },
+  {
+   "source": "n79",
+   "target": "n80",
+   "label": "HAS_EMAIL"
+  },
+  {
+   "source": "n79",
+   "target": "n81",
+   "label": "HAS_USERNAME"
+  },
+  {
+   "source": "n81",
+   "target": "n82",
+   "label": "HAS_SOCIAL_ACCOUNT"
+  },
+  {
+   "source": "n65",
+   "target": "n55",
+   "label": "CONTRIBUTES_TO"
+  },
+  {
+   "source": "n74",
+   "target": "n55",
+   "label": "CONTRIBUTES_TO"
+  },
+  {
+   "source": "n61",
+   "target": "n83",
+   "label": "HAS_PHONE"
+  },
+  {
+   "source": "n66",
+   "target": "n84",
+   "label": "FOUND_IN_BREACH"
+  },
+  {
+   "source": "n75",
+   "target": "n84",
+   "label": "FOUND_IN_BREACH"
+  },
+  {
+   "source": "n75",
+   "target": "n85",
+   "label": "ASSOCIATED_WITH_DEVICE"
+  },
+  {
+   "source": "n85",
+   "target": "n86",
+   "label": "INFECTED_BY"
+  },
+  {
+   "source": "n74",
+   "target": "n87",
+   "label": "OWNS_WALLET"
+  },
+  {
+   "source": "n36",
+   "target": "n88",
+   "label": "HAS_WEBSITE"
+  },
+  {
+   "source": "n88",
+   "target": "n89",
+   "label": "HAS_TRACKER"
+  },
+  {
+   "source": "n48",
+   "target": "n89",
+   "label": "HAS_TRACKER"
+  },
+  {
+   "source": "n55",
+   "target": "n90",
+   "label": "LEAKS"
+  },
+  {
+   "source": "n57",
+   "target": "n91",
+   "label": "REFERENCES"
+  },
+  {
+   "source": "n60",
+   "target": "n91",
+   "label": "REFERENCES"
+  },
+  {
+   "source": "n84",
+   "target": "n92",
+   "label": "HAS_CREDENTIAL"
+  },
+  {
+   "source": "n84",
+   "target": "n93",
+   "label": "HAS_CREDENTIAL"
+  }
+ ],
+ "files": []
+}

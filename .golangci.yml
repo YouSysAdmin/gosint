@@ -1,0 +1,26 @@
+# The default linter set plus resource and correctness checks that only
+# fire on a regression.
+version: "2"
+
+linters:
+  default: standard
+
+  enable:
+    - bodyclose
+    - rowserrcheck
+    - sqlclosecheck
+    - errorlint
+    - copyloopvar
+    - durationcheck
+    - intrange
+    - misspell
+    - nolintlint
+    - unconvert
+    - wastedassign
+    - gosec
+
+  settings:
+    staticcheck:
+      checks:
+        - all
+        - -QF1001

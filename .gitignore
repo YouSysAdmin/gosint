@@ -1,0 +1,23 @@
+# Local config
+gosint.yaml
+
+# Build artifacts
+bin/
+/dist/
+web/dist/*
+!web/dist/.gitkeep
+web/node_modules/
+
+# Local data: the sqlite file and the dev postgres (compose.dev.yaml)
+/data/
+/dev-data/
+
+.env
+
+# OS and editor noise
+.DS_Store
+*.log
+.idea/
+
+# Browser automation artifacts
+.playwright-mcp/

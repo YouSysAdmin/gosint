@@ -1,0 +1,108 @@
+# Gosint, Copyright (c) 2026 YouSysAdmin
+
+version: 2
+
+project_name: gosint
+
+# The console is EMBEDDED in the binary, so it has to exist before the
+# Go build runs. Skipping this does not fail: go:embed matches the
+# committed .gitkeep and compiles happily, shipping a release whose /app
+# serves nothing.
+#
+# The touch afterwards puts the .gitkeep back, which the console build
+# deletes, so a later plain `go build` in the same checkout still has
+# something for go:embed to match.
+before:
+  hooks:
+    - go mod download
+    - sh -c 'cd web && npm ci && npm run build && touch dist/.gitkeep'
+
+# A tag carrying a semver pre-release part (v1.4.0-rc.1) is a
+# PRE-RELEASE: GitHub marks it so, and the moving image tags below stay
+# where they are rather than following it.
+release:
+  prerelease: auto
+
+env:
+  - CGO_ENABLED=0
+
+builds:
+  - id: gosint
+    main: ./cmd/gosint
+    binary: gosint
+    # A server on linux, a workstation on a Mac or Windows: the sqlite
+    # backend makes a single-user install on a laptop the common case.
+    targets:
+      - linux_amd64
+      - linux_arm64
+      - darwin_arm64
+      - windows_amd64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/yousysadmin/gosint/pkg.Version={{ .Version }}
+
+archives:
+  - ids: [gosint]
+    name_template: >-
+      {{ .Binary }}_v{{ .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    # Windows users expect a zip. The install script reads tar.gz only
+    # and does not run there.
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      # What an operator needs beside the binary to stand one up.
+      - gosint.example.yaml
+      - examples/transforms/*
+      - examples/sketches/*
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.sha256"
+
+snapshot:
+  # .Version, not .Tag. The tag carries its leading v and the archive
+  # template adds one.
+  version_template: "{{ .Version }}-devel"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+# ONE block for both architectures, and no manifest section: dockers_v2
+# builds the platforms together and publishes the manifest itself.
+#
+# Dockerfile.release copies the binary goreleaser already built, so the
+# image ships the artifact being released and not a second build.
+dockers_v2:
+  - ids: [gosint]
+    images:
+      - ghcr.io/yousysadmin/gosint
+    # Moving tags so `docker pull gosint` and a minor-series pin both
+    # resolve. goreleaser leaves them alone on a snapshot, so a local dry
+    # run cannot move :latest. A PRE-RELEASE moves neither: the template
+    # renders empty and goreleaser drops an empty tag, so an rc is
+    # pullable by its version only.
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .Prerelease }}v{{ .Major }}.{{ .Minor }}{{ end }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    dockerfile: Dockerfile.release
+    labels:
+      org.opencontainers.image.title: gosint
+      org.opencontainers.image.description: Self-hosted OSINT graph exploration
+      org.opencontainers.image.source: https://github.com/YouSysAdmin/gosint
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .Date }}"

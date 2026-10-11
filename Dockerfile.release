@@ -1,0 +1,56 @@
+# The RELEASE image: it copies a binary goreleaser already built, so
+# the image ships the artifact being released and not a second build.
+#
+# The console is inside the binary, so there is nothing to copy but the
+# one file.
+FROM alpine:3.21
+
+# ca-certificates for every third party the transforms reach over
+# HTTPS, tzdata for the scheduler's local times. nmap is the active
+# source of ip_to_ports, which fails the scan on a server without the
+# binary.
+#
+# The rest is for transform files with a `run` line: the interpreters
+# and tools an operator's script is likely to call. Template transforms
+# run inside the binary and need none of it.
+RUN apk add --no-cache ca-certificates tzdata nmap \
+        bash curl jq yq-go openssl bind-tools whois git exiftool \
+        python3 py3-pip \
+        py3-requests py3-httpx py3-aiohttp py3-pysocks \
+        py3-beautifulsoup4 py3-lxml py3-html5lib py3-feedparser \
+        py3-dnspython py3-tldextract py3-netaddr py3-whois \
+        py3-phonenumbers py3-validators py3-dateutil py3-tz \
+        py3-yaml py3-jwt py3-cryptography py3-pillow py3-exifread \
+        py3-maxminddb py3-geoip2 \
+    && adduser -D -H -u 1000 gosint
+
+# What alpine does not package goes into a venv that sees the system
+# packages above, first on the PATH, so a script's python3 has both.
+RUN python3 -m venv --system-site-packages /opt/gosint/python \
+    && /opt/gosint/python/bin/pip install --no-cache-dir shodan ipwhois
+
+# $TARGETPLATFORM, not a bare filename. dockers_v2 builds both
+# architectures from ONE build and lays the context out per platform
+# (linux/amd64/gosint, linux/arm64/gosint), so `COPY gosint` finds
+# nothing.
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/gosint /usr/local/bin/gosint
+
+USER gosint
+WORKDIR /data
+
+# The defaults bind the loopback and put the sqlite file under a
+# relative data/, neither of which fits a container. Everything else
+# (files, cache, transforms) lands beside the database.
+# HOME is under the volume so a script's caches (tldextract's suffix
+# list, shodan's key file) are writable and survive a restart.
+ENV GOSINT_SERVER_ADDR=0.0.0.0:4000 \
+    GOSINT_DATABASE_DSN=/data/gosint.db \
+    HOME=/data \
+    PATH=/opt/gosint/python/bin:$PATH
+
+EXPOSE 4000
+VOLUME /data
+
+ENTRYPOINT ["gosint"]
+CMD ["serve"]

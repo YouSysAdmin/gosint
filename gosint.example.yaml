@@ -1,0 +1,92 @@
+# Copy to gosint.yaml. Every key can also be set as GOSINT_<SECTION>_<KEY>,
+# for example GOSINT_DATABASE_DSN.
+
+server:
+  # Loopback by default. A team install behind a reverse proxy binds
+  # wider and lists the proxy in trusted_proxies.
+  addr: 127.0.0.1:4000
+  # Where people reach the console, when a proxy rewrites the host.
+  public_url: ""
+  trusted_proxies: []
+  # Whether this listener does the TLS handshake itself. Off by default,
+  # a reverse proxy in front usually holds the certificate. With it on,
+  # a public_url that is set has to be https.
+  tls:
+    # none   - plain HTTP, something in front terminates TLS.
+    # manual - a PEM pair you provide and renew.
+    # self   - a generated pair, for a LAN or a first run. Browsers warn.
+    mode: none
+    # manual: the pair. watch reloads it when the files change, so a
+    # renewal needs no restart.
+    # cert: /etc/gosint/tls/fullchain.pem
+    # key: /etc/gosint/tls/privkey.pem
+    # watch: false
+    # self: the name on the certificate (empty takes the host of
+    # public_url, else localhost, and localhost, 127.0.0.1 and ::1 are
+    # always on it). alg is rsa, ecdsa or ed25519.
+    # fqdn: osint.example.com
+    # alg: ecdsa
+    # Where the generated pair is kept, empty is a tls directory beside
+    # the sqlite database. Without it every start makes a new one.
+    # cache_dir: ""
+
+database:
+  # sqlite for a local single-user install, postgres for a team.
+  driver: sqlite
+  # A file path for sqlite, a URL for postgres:
+  #   postgres://gosint:gosint@localhost:5434/gosint?sslmode=disable
+  dsn: data/gosint.db
+
+logging:
+  level: info
+  # json or text
+  format: json
+  output: stdout
+  color: true
+
+auth:
+  # How long a sign-in lasts. Use renews it once half has passed.
+  session_ttl: 168h
+  # A sign-in ends this long after it began, however often it is used.
+  # 0 lifts the cap.
+  session_max_life: 720h
+  # Off, only the first account can register (the one claiming a fresh
+  # install). Turn on to let anyone reaching the console sign up.
+  open_registration: false
+  # Passkeys (WebAuthn) as a sign-in beside the password.
+  passkeys_enabled: true
+  # Sign-in, registration and reset requests one address may make in a
+  # minute.
+  rate_limit_per_minute: 10
+  # Identity providers, the mail relay, the language models, the
+  # worker (on or off, its tuning, its cache directory), the tools and
+  # the file store (where attachments live, S3 keys included) are set in
+  # the admin panel, sealed in the database with everything
+  # else. No worker runs before the server is unsealed.
+
+vault:
+  # The server starts SEALED: the master key is stored wrapped under an
+  # unseal key and nothing opens until it is given, in the console
+  # (/app/unseal) or with `gosint vault init` the first time. Every node
+  # of a postgres fleet is unsealed on its own.
+  #
+  # An unattended start reads the unseal key from a file or from
+  # GOSINT_VAULT_UNSEAL_KEY. The data is then only as safe as that file.
+  unseal_key_file: ""
+  # Development and tests only: the raw key, 32 bytes of base64, which
+  # unseals at boot and sits in clear wherever this file is.
+  master_key: ""
+
+transforms:
+  # Your own transforms as files, read while the server runs: a YAML
+  # template, or a manifest with a run line that runs a script (see
+  # examples/transforms). Empty is a transforms directory beside the
+  # sqlite database, and none on postgres. Every node of a team install
+  # needs the same files.
+  dir: ""
+
+console:
+  # MapLibre styles for the map view, loaded by the browser. Empty draws
+  # the points on a blank background, with no tile server reached.
+  map_style_light: https://tiles.openfreemap.org/styles/positron
+  map_style_dark: https://tiles.openfreemap.org/styles/dark

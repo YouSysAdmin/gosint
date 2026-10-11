@@ -1,0 +1,15 @@
+Gosint
+Copyright (c) 2026 YouSysAdmin
+
+Gosint is licensed under the MIT License, see LICENSE.
+
+-------------------------------------------------------------------------------
+Bundled assets
+-------------------------------------------------------------------------------
+
+The console's icons are Feather icons, refitted to an 18px grid.
+  Feather, https://github.com/feathericons/feather
+  MIT License, Copyright (c) 2013-2023 Cole Bemis
+
+Third-party Go and npm dependencies keep their own licenses (MIT, BSD,
+Apache 2.0). A release ships their notices with the binary.

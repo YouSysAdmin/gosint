@@ -1,0 +1,51 @@
+# Gosint, Copyright (c) 2026 YouSysAdmin
+#
+# Git hooks, installed with `lefthook install` (brew install lefthook).
+# The commit hook checks what the commit touches, the full `task check`
+# stays the gate before a push.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: copyright header
+      glob: "*.go"
+      run: |
+        sh -c 'for f in "$@"; do
+          head -1 "$f" | grep -q "^// Gosint, Copyright (c) 2026 YouSysAdmin$" || { echo "missing header: $f"; bad=1; }
+        done; exit ${bad:-0}' -- {staged_files}
+
+    - name: gofmt
+      glob: "*.go"
+      run: |
+        sh -c 'out=$(gofmt -l "$@"); test -z "$out" || { echo "$out"; exit 1; }' -- {staged_files}
+
+    # vet and lint on the PACKAGES of the staged files, not the whole
+    # tree.
+    - name: go vet
+      glob: "*.go"
+      run: |
+        sh -c 'go vet $(for f in "$@"; do echo "./$(dirname "$f")"; done | sort -u)' -- {staged_files}
+
+    - name: golangci-lint
+      glob: "*.go"
+      run: |
+        sh -c 'golangci-lint run $(for f in "$@"; do echo "./$(dirname "$f")"; done | sort -u)' -- {staged_files}
+
+    - name: go mod tidy
+      glob: "go.{mod,sum}"
+      run: go mod tidy -diff
+
+    - name: prettier
+      root: web/
+      glob: "*.{ts,vue,css}"
+      run: npx prettier --check {staged_files}
+
+    - name: vue-tsc
+      root: web/
+      glob: "*.{ts,vue}"
+      run: npm run type-check
+
+pre-push:
+  jobs:
+    - name: go test
+      run: go test -shuffle=on ./...
