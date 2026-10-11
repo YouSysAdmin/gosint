@@ -40,12 +40,12 @@ func TestReputationSourcesEnrichAndFlagAnAddress(t *testing.T) {
 			}
 			_, _ = w.Write([]byte(`{"data":{"attributes":{"last_analysis_stats":{"malicious":3,"suspicious":1,"harmless":60,"undetected":10},"reputation":-5,"as_owner":"Example AS","country":"NL"}}}`))
 		},
-		"/api/v2/hosts/": func(w http.ResponseWriter, r *http.Request) {
-			if !strings.HasPrefix(r.Header.Get("Authorization"), "Basic ") {
+		"/v3/global/asset/host/": func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") != "Bearer ct" || r.Header.Get("X-Organization-ID") != "org" {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
-			_, _ = w.Write([]byte(`{"result":{"services":[{"port":22,"service_name":"SSH","transport_protocol":"TCP"},{"port":443,"service_name":"HTTP","transport_protocol":"TCP"}],"location":{"country":"Netherlands","city":"Amsterdam"},"autonomous_system":{"asn":64496,"name":"Example AS"}}}`))
+			_, _ = w.Write([]byte(`{"result":{"resource":{"services":[{"port":22,"protocol":"SSH","transport_protocol":"TCP","software":[{"product":"openssh","version":"8.9"}],"vulns":[{"id":"CVE-2023-38408"}]},{"port":443,"protocol":"HTTP","transport_protocol":"TCP"}],"location":{"country":"Netherlands","city":"Amsterdam"},"autonomous_system":{"asn":64496,"name":"Example AS"},"dns":{"reverse_dns":{"names":["mail.example.com"]}}}}}`))
 		},
 		"/shodan/host/": func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Query().Get("key") != "sh" {
@@ -75,7 +75,7 @@ func TestReputationSourcesEnrichAndFlagAnAddress(t *testing.T) {
 		t.Errorf("after VirusTotal: flag %q, props %v", got.Flag, got.Properties)
 	}
 
-	h.run(ip.IPToCensys{BaseURL: base}, map[string]string{"CENSYS_API_ID": "id", "CENSYS_API_SECRET": "s"}, *got)
+	h.run(ip.IPToCensys{BaseURL: base}, map[string]string{"CENSYS_API_TOKEN": "ct", "CENSYS_ORG_ID": "org"}, *got)
 	got, _ = h.st.Graph.Node(t.Context(), h.sketch, addr.ID)
 	if got.Properties["city"] != "Amsterdam" || got.Properties["asn"] != "AS64496" {
 		t.Errorf("after Censys: props %v", got.Properties)

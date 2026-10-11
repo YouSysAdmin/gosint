@@ -5,12 +5,12 @@ package ip
 import (
 	"cmp"
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -29,7 +29,7 @@ const (
 	AbuseIPDBURL  = "https://api.abuseipdb.com"
 	GreyNoiseURL  = "https://api.greynoise.io"
 	VirusTotalURL = "https://www.virustotal.com"
-	CensysURL     = "https://search.censys.io"
+	CensysURL     = "https://api.platform.censys.io"
 	ShodanURL     = "https://api.shodan.io"
 )
 
@@ -267,7 +267,7 @@ func (e IPToVirusTotal) Run(ctx context.Context, x *transform.Exec, inputs []gra
 	return nil
 }
 
-// IPToCensys reads the services Censys saw on an address.
+// IPToCensys reads what the Censys Platform saw on an address.
 type IPToCensys struct {
 	BaseURL string
 }
@@ -275,38 +275,72 @@ type IPToCensys struct {
 // Meta describes the transform.
 func (IPToCensys) Meta() transform.Meta {
 	return transform.Meta{Name: "ip_to_censys", Category: "IP", Input: "ip", Output: "port",
-		Description: "List the services Censys saw on an address as ports, with its location and network.",
+		Description: "List the services Censys saw on an address as ports with their software, with its location, network, names and the CVEs Censys matches.",
 		Params: []transform.Param{
-			{Name: "CENSYS_API_ID", Type: transform.ParamSecret, Required: true, Description: "The Censys API ID."},
-			{Name: "CENSYS_API_SECRET", Type: transform.ParamSecret, Required: true, Description: "The Censys API secret."},
+			{Name: "CENSYS_API_TOKEN", Type: transform.ParamSecret, Required: true, Description: "A Censys Platform personal access token."},
+			{Name: "CENSYS_ORG_ID", Type: transform.ParamSecret, Description: "The Censys organization to bill, the free credits of the token's account without it."},
 		}}
 }
 
-// Run enriches each address.
+// Run enriches each address. A refused token fails the scan, since
+// every address would fail the same way.
 func (e IPToCensys) Run(ctx context.Context, x *transform.Exec, inputs []graphmodel.Node) error {
-	auth := base64.StdEncoding.EncodeToString([]byte(x.Param("CENSYS_API_ID") + ":" + x.Param("CENSYS_API_SECRET")))
-	header := http.Header{"Authorization": {"Basic " + auth}, "Accept": {"application/json"}}
+	header := http.Header{"Authorization": {"Bearer " + x.Param("CENSYS_API_TOKEN")},
+		"Accept": {"application/vnd.censys.api.v3.host.v1+json, application/json"}}
+	if org := x.Param("CENSYS_ORG_ID"); org != "" {
+		header.Set("X-Organization-ID", org)
+	}
+
 	for _, in := range inputs {
 		var answer struct {
 			Result struct {
-				Services []struct {
-					Port      int    `json:"port"`
-					Name      string `json:"service_name"`
-					Transport string `json:"transport_protocol"`
-				} `json:"services"`
-				Location struct {
-					Country string `json:"country"`
-					City    string `json:"city"`
-				} `json:"location"`
-				AS struct {
-					ASN  int    `json:"asn"`
-					Name string `json:"name"`
-				} `json:"autonomous_system"`
+				Resource struct {
+					Services []struct {
+						Port      int    `json:"port"`
+						Protocol  string `json:"protocol"`
+						Transport string `json:"transport_protocol"`
+						Banner    string `json:"banner"`
+						Software  []struct {
+							Product string `json:"product"`
+							Version string `json:"version"`
+						} `json:"software"`
+						Vulns []struct {
+							ID string `json:"id"`
+						} `json:"vulns"`
+					} `json:"services"`
+					Location struct {
+						Country     string `json:"country"`
+						City        string `json:"city"`
+						Coordinates *struct {
+							Latitude  float64 `json:"latitude"`
+							Longitude float64 `json:"longitude"`
+						} `json:"coordinates"`
+					} `json:"location"`
+					AS struct {
+						ASN  int    `json:"asn"`
+						Name string `json:"name"`
+					} `json:"autonomous_system"`
+					OS struct {
+						Product string `json:"product"`
+						Version string `json:"version"`
+					} `json:"operating_system"`
+					DNS struct {
+						Reverse struct {
+							Names []string `json:"names"`
+						} `json:"reverse_dns"`
+					} `json:"dns"`
+				} `json:"resource"`
 			} `json:"result"`
 		}
 
-		found, err := httpx.GetJSON(ctx, x, e.BaseURL+"/api/v2/hosts/"+url.PathEscape(props.Str(in.Properties, "address")), header, &answer)
+		u := e.BaseURL + "/v3/global/asset/host/" + url.PathEscape(props.Str(in.Properties, "address"))
+		found, err := httpx.GetJSON(ctx, x, u, header, &answer)
 		if err != nil {
+			var se httpx.StatusError
+			if errors.As(err, &se) && (se.Code == http.StatusUnauthorized || se.Code == http.StatusForbidden) {
+				return errors.New("the Censys token was refused: it is wrong, expired or lacks the API Access role")
+			}
+
 			x.Warn("%s: %v", in.Label, err)
 
 			continue
@@ -318,21 +352,36 @@ func (e IPToCensys) Run(ctx context.Context, x *transform.Exec, inputs []graphmo
 			continue
 		}
 
-		r := answer.Result
+		r := answer.Result.Resource
 		extra := map[string]any{}
-		if props.Str(in.Properties, "country") == "" && r.Location.Country != "" {
-			extra["country"] = r.Location.Country
+		fill := func(field string, v any) {
+			if old := in.Properties[field]; old == nil || old == "" {
+				extra[field] = v
+			}
 		}
 
-		if props.Str(in.Properties, "city") == "" && r.Location.City != "" {
-			extra["city"] = r.Location.City
+		if r.Location.Country != "" {
+			fill("country", r.Location.Country)
+		}
+
+		if r.Location.City != "" {
+			fill("city", r.Location.City)
+		}
+
+		if c := r.Location.Coordinates; c != nil {
+			fill("latitude", c.Latitude)
+			fill("longitude", c.Longitude)
 		}
 
 		if r.AS.ASN != 0 {
 			extra["asn"] = fmt.Sprintf("AS%d", r.AS.ASN)
-			if props.Str(in.Properties, "isp") == "" {
-				extra["isp"] = r.AS.Name
+			if r.AS.Name != "" {
+				fill("isp", r.AS.Name)
 			}
+		}
+
+		if os := strings.TrimSpace(r.OS.Product + " " + r.OS.Version); os != "" {
+			extra["censys_os"] = os
 		}
 
 		if len(extra) > 0 {
@@ -341,12 +390,46 @@ func (e IPToCensys) Run(ctx context.Context, x *transform.Exec, inputs []graphmo
 			}
 		}
 
+		cves := map[string]bool{}
 		for _, s := range r.Services {
-			port := map[string]any{"number": s.Port, "protocol": s.Transport, "state": "open", "service": strings.ToLower(s.Name)}
+			port := map[string]any{"number": s.Port, "protocol": strings.ToUpper(cmp.Or(s.Transport, "tcp")), "state": "open"}
+			service := strings.ToLower(s.Protocol)
+			if len(s.Software) > 0 {
+				service = cmp.Or(strings.TrimSpace(s.Software[0].Product+" "+s.Software[0].Version), service)
+			}
+
+			if service != "" {
+				port["service"] = service
+			}
+
+			if banner := strings.TrimSpace(s.Banner); banner != "" {
+				port["banner"] = truncate(banner, shodanBannerMax)
+			}
+
 			if _, err := x.NodeAndLink(ctx, in, "HAS_PORT", "port", port); err != nil {
 				x.Warn("%s: port %d: %v", in.Label, s.Port, err)
 			}
+
+			for _, v := range s.Vulns {
+				if strings.HasPrefix(strings.ToUpper(v.ID), "CVE-") {
+					cves[v.ID] = true
+				}
+			}
 		}
+
+		for _, name := range r.DNS.Reverse.Names {
+			if _, err := x.NodeAndLink(ctx, in, "REVERSE_RESOLVES_TO", "domain", map[string]any{"domain": name}); err != nil {
+				x.Warn("%s: %s: %v", in.Label, name, err)
+			}
+		}
+
+		for _, id := range slices.Sorted(maps.Keys(cves)) {
+			if _, err := x.NodeAndLink(ctx, in, "REFERENCES", "cve", map[string]any{"id": id}); err != nil {
+				x.Warn("%s: %s: %v", in.Label, id, err)
+			}
+		}
+
+		x.Found("%s: %d services, %d CVEs", in.Label, len(r.Services), len(cves))
 	}
 
 	return nil
