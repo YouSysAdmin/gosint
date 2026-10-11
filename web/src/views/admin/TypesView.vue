@@ -18,6 +18,7 @@ import FormField from '@/components/FormField.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AdminNav from '@/views/admin/AdminNav.vue'
 import { iconFor, iconNames } from '@/composables/entityIcons'
+import { kindLabel } from '@/composables/fieldKinds'
 import { useConfirm } from '@/composables/useConfirm'
 import { useCatalogStore } from '@/stores/catalog'
 import { useNotificationStore } from '@/stores/notification'
@@ -301,9 +302,14 @@ async function remove(t: CustomType) {
           <FormField label="Title">
             <input v-model="f.title" class="form-input" placeholder="First name" />
           </FormField>
-          <FormField label="Kind">
+          <FormField
+            label="Kind"
+            :hint="
+              f.primary ? 'The name is text. Other fields take numbers, dates, yes/no, lists' : ''
+            "
+          >
             <select v-model="f.kind" class="form-select">
-              <option v-for="k in kindsFor(f)" :key="k" :value="k">{{ k }}</option>
+              <option v-for="k in kindsFor(f)" :key="k" :value="k">{{ kindLabel(k) }}</option>
             </select>
           </FormField>
         </div>

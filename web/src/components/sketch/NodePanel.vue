@@ -15,6 +15,7 @@ import NeighbourMap from '@/components/sketch/NeighbourMap.vue'
 import { formatDate } from '@/composables/formatDate'
 import { describeOrigin, originDate, originOf, seenOf } from '@/composables/provenance'
 import { formFields, fromProperties, patch, type FormValues } from '@/composables/entityForm'
+import { kindLabel } from '@/composables/fieldKinds'
 import { useCatalogStore } from '@/stores/catalog'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -442,12 +443,10 @@ interface CustomRow {
   error?: string
 }
 
-const CUSTOM_KINDS: { value: CustomKind; label: string }[] = [
-  { value: 'string', label: 'Text' },
-  { value: 'number', label: 'Number' },
-  { value: 'bool', label: 'Yes/no' },
-  { value: 'date', label: 'Date' },
-]
+const CUSTOM_KINDS = (['string', 'number', 'bool', 'date'] as CustomKind[]).map((value) => ({
+  value,
+  label: kindLabel(value),
+}))
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
 // kindOf reads the kind a stored value has. A date is a text that reads
