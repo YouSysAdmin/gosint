@@ -334,6 +334,7 @@ function logOf(s: Scan) {
 }
 const dropAt = ref<Point | null>(null)
 const addType = ref('')
+const cloneOf = ref<GraphNode | null>(null)
 const showChat = ref(false)
 const showNotes = ref(false)
 const sideTab = ref<'entity' | 'chat' | 'notes'>('entity')
@@ -532,7 +533,18 @@ function toggle(nodeId: string) {
 // openAdd starts the Add dialog, with a type when a card was clicked.
 function openAdd(type = '') {
   addType.value = type
+  cloneOf.value = null
   dropAt.value = null
+  dialog.value = 'add'
+}
+
+// openClone starts the Add dialog from an entity, the copy landing
+// beside it.
+function openClone(n: GraphNode) {
+  menu.value = null
+  addType.value = ''
+  cloneOf.value = n
+  dropAt.value = n.x !== null && n.y !== null ? { x: n.x + 30, y: n.y + 30 } : null
   dialog.value = 'add'
 }
 
@@ -540,6 +552,7 @@ function openAdd(type = '') {
 // that type and the new entity lands where it was dropped.
 function dropType(type: string, graph: Point) {
   addType.value = type
+  cloneOf.value = null
   dropAt.value = graph
   dialog.value = 'add'
 }
@@ -603,6 +616,7 @@ function askAi() {
 
 function addRelation(n: GraphNode) {
   menu.value = null
+  cloneOf.value = null
   selected.value = new Set([n.id])
   dialog.value = 'add'
 }
@@ -1390,6 +1404,7 @@ onBeforeUnmount(() => {
           @focus="focus"
           @select="(ids) => selectMany(ids, false)"
           @link="link"
+          @clone="openClone"
           @transform="dialog = 'run'"
           @edges-changed="loadGraph"
           @scan="showScan"
@@ -1597,9 +1612,10 @@ onBeforeUnmount(() => {
     <AddNodeDialog
       v-if="dialog === 'add'"
       :sketch-id="id"
-      :link-to="one ?? undefined"
+      :link-to="cloneOf ? undefined : (one ?? undefined)"
       :edges="edges"
       :initial-type="addType || undefined"
+      :clone-of="cloneOf ?? undefined"
       @close="dialog = ''"
       @added="added"
     />
@@ -1626,6 +1642,7 @@ onBeforeUnmount(() => {
       @configure="configure"
       @add-relation="addRelation"
       @link-to="(n) => ((menu = null), link(n))"
+      @clone="openClone"
       @ask-ai="askAi"
       @flag="flag"
       @delete="menuDelete"

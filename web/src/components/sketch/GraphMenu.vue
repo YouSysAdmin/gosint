@@ -36,6 +36,7 @@ const emit = defineEmits<{
   (e: 'configure', transform: Transform): void
   (e: 'addRelation', node: GraphNode): void
   (e: 'linkTo', node: GraphNode): void
+  (e: 'clone', node: GraphNode): void
   (e: 'askAi'): void
   (e: 'flag', node: GraphNode, color: string): void
   (e: 'delete'): void
@@ -252,6 +253,7 @@ onBeforeUnmount(() => {
           Add a related entity
         </button>
         <button v-if="node" class="menu-item" @click="emit('linkTo', node)">Link to...</button>
+        <button v-if="node" class="menu-item" @click="emit('clone', node)">Clone</button>
         <button class="menu-item" @click="emit('askAi')">Ask the assistant</button>
         <div v-if="node" class="flags">
           <span class="text-xs text-muted">Flag</span>

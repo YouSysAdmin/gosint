@@ -31,6 +31,10 @@ export interface NodeInput {
   type: string
   label?: string
   properties?: Record<string, unknown>
+  color?: string
+  icon?: string
+  shape?: string
+  size?: number
   x?: number
   y?: number
 }

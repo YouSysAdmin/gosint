@@ -9,13 +9,14 @@ import { searchEntities, type SearchHit } from '@/api/catalog'
 import { deleteEdges, updateNode } from '@/api/sketches'
 import type { AttachedFile, GraphEdge, GraphNode, MailMessage } from '@/api/types'
 import MailViewer from '@/components/MailViewer.vue'
+import CustomFields from '@/components/sketch/CustomFields.vue'
 import EntityFields from '@/components/sketch/EntityFields.vue'
 import EntityIcon from '@/components/sketch/EntityIcon.vue'
 import NeighbourMap from '@/components/sketch/NeighbourMap.vue'
 import { formatDate } from '@/composables/formatDate'
 import { describeOrigin, originDate, originOf, seenOf } from '@/composables/provenance'
 import { formFields, fromProperties, patch, type FormValues } from '@/composables/entityForm'
-import { kindLabel } from '@/composables/fieldKinds'
+import { CUSTOM_KEY, customOf, typed, type CustomRow } from '@/composables/customFields'
 import { useCatalogStore } from '@/stores/catalog'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -31,6 +32,7 @@ const emit = defineEmits<{
   (e: 'focus', id: string): void
   (e: 'select', ids: string[]): void
   (e: 'link', from: GraphNode): void
+  (e: 'clone', from: GraphNode): void
   (e: 'transform'): void
   (e: 'edgesChanged'): void
   (e: 'scan', id: string): void
@@ -280,6 +282,7 @@ watch(
 
 const type = computed(() => catalog.type(props.node.type))
 const fields = computed(() => formFields(type.value))
+const declared = computed(() => new Set(type.value?.fields.map((f) => f.name) ?? []))
 const props_ = computed(() =>
   Object.entries(props.node.properties ?? {}).filter(
     ([, v]) => v !== null && v !== '' && !(Array.isArray(v) && !v.length),
@@ -429,66 +432,9 @@ async function rename() {
   }
 }
 
-// Custom fields are the entity's own properties its type does not
-// declare: any name the investigator wants, a text, number, yes/no or
-// date value. The store keeps unknown keys, the filters offer them.
-type CustomKind = 'string' | 'number' | 'bool' | 'date'
-
-interface CustomRow {
-  key: string
-  value: string
-  // was is the stored value, absent for a row added in this edit.
-  was?: string
-  kind: CustomKind
-  error?: string
-}
-
-const CUSTOM_KINDS = (['string', 'number', 'bool', 'date'] as CustomKind[]).map((value) => ({
-  value,
-  label: kindLabel(value),
-}))
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
-
-// kindOf reads the kind a stored value has. A date is a text that reads
-// as YYYY-MM-DD, the store keeps it as a string.
-function kindOf(v: unknown): CustomKind {
-  if (typeof v === 'number') return 'number'
-  if (typeof v === 'boolean') return 'bool'
-  return typeof v === 'string' && ISO_DATE.test(v) ? 'date' : 'string'
-}
-
 const custom = ref<CustomRow[]>([])
 const removedCustom = ref<string[]>([])
 const customError = ref('')
-const CUSTOM_KEY = /^[A-Za-z][A-Za-z0-9_ -]{0,63}$/
-
-function customOf(p: Record<string, unknown>): CustomRow[] {
-  const declared = new Set(type.value?.fields.map((f) => f.name) ?? [])
-  return Object.entries(p)
-    .filter(
-      ([k, v]) =>
-        !declared.has(k) && v !== null && ['string', 'number', 'boolean'].includes(typeof v),
-    )
-    .map(([k, v]) => ({
-      key: k,
-      value: String(v),
-      was: String(v),
-      kind: kindOf(v),
-    }))
-}
-
-function addCustom() {
-  custom.value = [...custom.value, { key: '', value: '', kind: 'string' }]
-}
-
-// setKind switches a new row's kind and drops a value the new input
-// could not show.
-function setKind(r: CustomRow, kind: CustomKind) {
-  r.kind = kind
-  r.error = undefined
-  if (kind === 'bool') r.value = r.value === 'false' ? 'false' : 'true'
-  else if (kind === 'date' && !ISO_DATE.test(r.value)) r.value = ''
-}
 
 function removeCustom(i: number) {
   const r = custom.value[i]
@@ -496,24 +442,9 @@ function removeCustom(i: number) {
   custom.value = custom.value.filter((_, j) => j !== i)
 }
 
-// typed turns a row's text into its kind, or a message saying why it
-// cannot be one.
-function typed(r: CustomRow): { value: unknown } | { error: string } {
-  const v = r.value.trim()
-  if (r.kind === 'number') {
-    const n = Number(v)
-    if (v === '' || !Number.isFinite(n)) return { error: 'not a number' }
-    return { value: n }
-  }
-  if (r.kind === 'bool') return { value: v === 'true' }
-  if (r.kind === 'date' && !ISO_DATE.test(v)) return { error: 'not a date' }
-  return { value: v }
-}
-
 // customChanges is what the custom rows change, or a message naming a
 // bad row.
 function customChanges(): Record<string, unknown> | string {
-  const declared = new Set(type.value?.fields.map((f) => f.name) ?? [])
   const out: Record<string, unknown> = {}
   for (const k of removedCustom.value) out[k] = null
   const seen = new Set<string>()
@@ -524,7 +455,7 @@ function customChanges(): Record<string, unknown> | string {
       if (!key && !r.value.trim()) continue
       if (!CUSTOM_KEY.test(key))
         return `"${key}" is not a field name, use letters, digits, spaces, - and _`
-      if (declared.has(key)) return `${key} is a field of the type, set it above`
+      if (declared.value.has(key)) return `${key} is a field of the type, set it above`
       const removed = removedCustom.value.includes(key)
       if (seen.has(key) || (!removed && props.node.properties?.[key] !== undefined))
         return `${key} is there already`
@@ -549,7 +480,7 @@ function customChanges(): Record<string, unknown> | string {
 
 function startEdit() {
   form.value = fromProperties(fields.value, props.node.properties ?? {})
-  custom.value = customOf(props.node.properties ?? {})
+  custom.value = customOf(props.node.properties ?? {}, declared.value)
   removedCustom.value = []
   customError.value = ''
   error.value = ''
@@ -636,6 +567,13 @@ onBeforeUnmount(() => {
       <button class="btn btn-sm btn-primary" @click="emit('transform')">Transform</button>
       <button class="btn btn-sm btn-secondary" @click="emit('link', node)">Link to...</button>
       <button
+        class="btn btn-sm btn-secondary"
+        title="A new entity of this type with the same custom fields, values left empty"
+        @click="emit('clone', node)"
+      >
+        Clone
+      </button>
+      <button
         v-if="!editing && fields.length"
         class="btn btn-sm btn-secondary ml-auto"
         @click="startEdit"
@@ -664,66 +602,7 @@ onBeforeUnmount(() => {
     <template v-if="tab === 'properties'">
       <form v-if="editing" class="mb-4" @submit.prevent="saveFields">
         <EntityFields v-model="form" :fields="fields" :error="error" />
-        <div class="custom mb-3">
-          <div class="custom-head">
-            <span class="text-sm fw-medium">Custom fields</span>
-            <button type="button" class="btn btn-sm btn-secondary" @click="addCustom">
-              Add a field
-            </button>
-          </div>
-          <p v-if="!custom.length" class="text-xs text-muted">
-            Anything the type does not cover, a name, a kind and a value. A date is kept as
-            YYYY-MM-DD text. Filters find them too.
-          </p>
-          <div v-for="(r, i) in custom" :key="i" class="custom-row">
-            <input
-              v-if="r.was === undefined"
-              v-model="r.key"
-              class="form-input"
-              placeholder="Name"
-              maxlength="64"
-            />
-            <span v-else class="custom-key text-sm" :title="r.key">{{ r.key }}</span>
-            <select
-              v-if="r.was === undefined"
-              class="form-select"
-              :value="r.kind"
-              title="What the value is"
-              @change="setKind(r, ($event.target as HTMLSelectElement).value as CustomKind)"
-            >
-              <option v-for="k in CUSTOM_KINDS" :key="k.value" :value="k.value">
-                {{ k.label }}
-              </option>
-            </select>
-            <span v-else class="custom-kind text-xs text-muted">
-              {{ CUSTOM_KINDS.find((k) => k.value === r.kind)?.label }}
-            </span>
-            <select v-if="r.kind === 'bool'" v-model="r.value" class="form-select custom-value">
-              <option value="true">Yes</option>
-              <option value="false">No</option>
-            </select>
-            <input
-              v-else-if="r.kind === 'date'"
-              v-model="r.value"
-              type="date"
-              class="form-input custom-value"
-              title="Stored as YYYY-MM-DD text"
-            />
-            <input
-              v-else
-              v-model="r.value"
-              class="form-input custom-value"
-              :aria-invalid="r.error ? 'true' : undefined"
-              :inputmode="r.kind === 'number' ? 'decimal' : undefined"
-              :placeholder="r.kind === 'number' ? '0' : 'Value'"
-            />
-            <button type="button" class="unlink" title="Remove the field" @click="removeCustom(i)">
-              &times;
-            </button>
-            <p v-if="r.error" class="form-error custom-error">{{ r.key }} is {{ r.error }}</p>
-          </div>
-          <p v-if="customError" class="text-xs text-danger mt-1">{{ customError }}</p>
-        </div>
+        <CustomFields v-model="custom" :error="customError" @remove="removeCustom" />
         <div class="flex gap-2 justify-end">
           <button type="button" class="btn btn-sm btn-secondary" @click="editing = false">
             Cancel
@@ -1298,56 +1177,6 @@ onBeforeUnmount(() => {
 
 .notes {
   font-size: 13px;
-}
-
-.custom {
-  padding-top: 10px;
-  border-top: 1px solid var(--border-secondary);
-}
-
-.custom-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.custom-row {
-  display: grid;
-  grid-template-columns: 1fr 128px auto;
-  gap: 6px;
-  align-items: center;
-  margin-bottom: 8px;
-  padding: 8px;
-  border: 1px solid var(--border-secondary);
-  border-radius: var(--radius-sm);
-}
-
-.custom-row .custom-value {
-  grid-row: 2;
-  grid-column: 1 / -1;
-}
-
-.custom-error {
-  grid-column: 1 / -1;
-  margin: 0;
-}
-
-.custom-row .form-input[aria-invalid='true'] {
-  border-color: var(--danger-500);
-}
-
-.custom-row .unlink {
-  grid-row: 1;
-  grid-column: 3;
-  opacity: 1;
-}
-
-.custom-key {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-secondary);
 }
 
 .group {
