@@ -2,8 +2,9 @@
 // The sketch graph, drawn by force-graph on a canvas.
 //
 // A node is a small shape coloured by its own colour or its type's,
-// sized by how many relationships it has. Names are drawn in one pass
-// after the nodes (drawLabels): the selection, the hovered entity and
+// sized by how many relationships it has, its type's icon inside once
+// zoomed in enough. Names are drawn in one pass after the nodes
+// (drawLabels): the selection, the hovered entity and
 // the hubs as chips at any zoom, everyone else once zoomed in, never
 // two on top of each other. Dragging a node pins it where it was dropped and reports the
 // position, so the layout survives a reload. Hovering lights the node
@@ -16,6 +17,7 @@ import { forceCollide, forceX, forceY } from 'd3-force'
 import ForceGraph from 'force-graph'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { GraphEdge, GraphNode } from '@/api/types'
+import { iconImage, inkOn } from '@/composables/iconImage'
 import { treeLayout } from '@/composables/treeLayout'
 import { useCatalogStore } from '@/stores/catalog'
 
@@ -28,6 +30,9 @@ interface Node {
   // fill is the colour drawn: the entity's own, else its type's,
   // resolved once per reload rather than per frame.
   fill: string
+
+  // icon is the type's Lucide icon name, drawn inside once big enough.
+  icon: string
   shape: string
   flag: string
   size: number | null
@@ -334,6 +339,7 @@ function toData() {
         type: n.type,
         color: n.color,
         fill: n.color || catalog.color(n.type),
+        icon: catalog.type(n.type)?.icon ?? '',
         shape: n.shape,
         flag: n.flag,
         size: n.size,
@@ -394,6 +400,7 @@ function toData() {
       type: g.type,
       color: '',
       fill: catalog.color(g.type),
+      icon: '',
       shape: '',
       flag: '',
       size: null,
@@ -546,6 +553,10 @@ function dimmed(id: string): boolean {
   return hovered !== null && hovered !== id && !neighbours.has(id)
 }
 
+// ICON_MIN_PX is the radius on screen from which a node shows its
+// type's icon, below it the icon is a smudge.
+const ICON_MIN_PX = 8
+
 function draw(node: Node, ctx: CanvasRenderingContext2D, scale: number) {
   // Never under two pixels on screen, or a zoomed out graph is dust.
   const r = Math.max(radius(node), 2 / scale)
@@ -585,6 +596,12 @@ function draw(node: Node, ctx: CanvasRenderingContext2D, scale: number) {
     ctx.clip()
     ctx.drawImage(img, x - r, y - r, 2 * r, 2 * r)
     ctx.restore()
+  } else if (node.icon && r * scale >= ICON_MIN_PX) {
+    const icon = iconImage(node.icon, inkOn(node.fill), redraw)
+    if (icon) {
+      const s = r * 1.1
+      ctx.drawImage(icon, x - s / 2, y - s / 2, s, s)
+    }
   }
 
   if (picked || hovered === node.id) {
@@ -1034,6 +1051,7 @@ watch(
     const own = new Map(props.nodes.map((n) => [n.id, n.color]))
     for (const n of graph.graphData().nodes as Node[]) {
       n.fill = own.get(n.id) || catalog.color(n.type)
+      if (!n.group) n.icon = catalog.type(n.type)?.icon ?? ''
     }
     redraw()
   },
