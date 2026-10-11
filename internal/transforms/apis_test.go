@@ -18,8 +18,8 @@ import (
 func TestFraudScore(t *testing.T) {
 	h := newHarness(t)
 	base := api(t, map[string]func(http.ResponseWriter, *http.Request){
-		"/v3/me/": func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Query().Get("key") != "k" {
+		"/v3/me": func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/v3/me" || r.URL.Query().Get("key") != "k" {
 				w.WriteHeader(http.StatusForbidden)
 
 				return

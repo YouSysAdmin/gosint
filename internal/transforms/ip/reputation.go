@@ -143,13 +143,17 @@ func (IPToGreyNoise) Meta() transform.Meta {
 	return transform.Meta{Name: "ip_to_greynoise", Category: "IP", Input: "ip", Output: "ip",
 		Description: "Ask GreyNoise whether an address scans the internet (noise) or is a known service (riot), malicious ones red.",
 		Params: []transform.Param{
-			{Name: "GREYNOISE_API_KEY", Type: transform.ParamSecret, Required: true, Description: "The GreyNoise API key."},
+			{Name: "GREYNOISE_API_KEY", Type: transform.ParamSecret, Description: "A GreyNoise API key, for a larger quota. The community API answers without one."},
 		}}
 }
 
 // Run enriches each address.
 func (e IPToGreyNoise) Run(ctx context.Context, x *transform.Exec, inputs []graphmodel.Node) error {
-	header := http.Header{"key": {x.Param("GREYNOISE_API_KEY")}, "Accept": {"application/json"}}
+	header := http.Header{"Accept": {"application/json"}}
+	if key := x.Param("GREYNOISE_API_KEY"); key != "" {
+		header.Set("key", key)
+	}
+
 	for _, in := range inputs {
 		var answer struct {
 			Noise          bool   `json:"noise"`

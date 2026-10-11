@@ -348,7 +348,7 @@ func (e IPToFraudScore) Run(ctx context.Context, x *transform.Exec, inputs []gra
 			} `json:"scamalytics"`
 		}
 
-		u := base + "/v3/" + url.PathEscape(x.Param("SCAMLYTICS_USERNAME")) + "/?" + q.Encode()
+		u := base + "/v3/" + url.PathEscape(x.Param("SCAMLYTICS_USERNAME")) + "?" + q.Encode()
 		if _, err := httpx.GetJSON(ctx, x, u, nil, &answer); err != nil {
 			x.Warn("%s: %v", addr, err)
 
