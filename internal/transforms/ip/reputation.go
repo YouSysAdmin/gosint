@@ -3,13 +3,16 @@
 package ip
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
 	"net/url"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/yousysadmin/gosint/internal/core/transform"
 	graphmodel "github.com/yousysadmin/gosint/internal/models/graph"
@@ -27,19 +30,26 @@ const (
 	GreyNoiseURL  = "https://api.greynoise.io"
 	VirusTotalURL = "https://www.virustotal.com"
 	CensysURL     = "https://search.censys.io"
+	ShodanURL     = "https://api.shodan.io"
 )
 
-// enrich lays extra over the input's properties and writes it back,
-// flagging it red when bad says so and clearing an earlier red flag
-// when it does not.
-func enrich(ctx context.Context, x *transform.Exec, in graphmodel.Node, extra map[string]any, bad bool) error {
+// layOver lays extra over the input's properties and writes it back,
+// leaving its flag alone.
+func layOver(ctx context.Context, x *transform.Exec, in graphmodel.Node, extra map[string]any) (graphmodel.Node, error) {
 	merged := maps.Clone(in.Properties)
 	if merged == nil {
 		merged = map[string]any{}
 	}
 
 	maps.Copy(merged, extra)
-	n, err := x.Node(ctx, in.Type, merged)
+
+	return x.Node(ctx, in.Type, merged)
+}
+
+// enrich lays extra over the input like layOver, flagging it red when
+// bad says so and clearing an earlier red flag when it does not.
+func enrich(ctx context.Context, x *transform.Exec, in graphmodel.Node, extra map[string]any, bad bool) error {
+	n, err := layOver(ctx, x, in, extra)
 	if err != nil {
 		return err
 	}
@@ -326,7 +336,7 @@ func (e IPToCensys) Run(ctx context.Context, x *transform.Exec, inputs []graphmo
 		}
 
 		if len(extra) > 0 {
-			if err := enrich(ctx, x, in, extra, false); err != nil {
+			if _, err := layOver(ctx, x, in, extra); err != nil {
 				x.Warn("%s: %v", in.Label, err)
 			}
 		}
@@ -340,4 +350,165 @@ func (e IPToCensys) Run(ctx context.Context, x *transform.Exec, inputs []graphmo
 	}
 
 	return nil
+}
+
+// shodanBannerMax bounds a banner kept on a port.
+const shodanBannerMax = 1000
+
+// IPToShodan reads what Shodan's host API saw on an address.
+type IPToShodan struct {
+	BaseURL string
+}
+
+// Meta describes the transform.
+func (IPToShodan) Meta() transform.Meta {
+	return transform.Meta{Name: "ip_to_shodan", Category: "IP", Input: "ip", Output: "port",
+		Description: "List the services Shodan saw on an address as ports with their banners, with its location, network, names and the CVEs Shodan matches.",
+		Params: []transform.Param{
+			{Name: "SHODAN_API_KEY", Type: transform.ParamSecret, Required: true, Description: "The Shodan API key."},
+		}}
+}
+
+// Run enriches each address. A refused key fails the scan, since every
+// address would fail the same way.
+func (e IPToShodan) Run(ctx context.Context, x *transform.Exec, inputs []graphmodel.Node) error {
+	header := http.Header{"Accept": {"application/json"}}
+	key := url.QueryEscape(x.Param("SHODAN_API_KEY"))
+	for _, in := range inputs {
+		var answer struct {
+			Country   string   `json:"country_name"`
+			City      string   `json:"city"`
+			Latitude  *float64 `json:"latitude"`
+			Longitude *float64 `json:"longitude"`
+			ISP       string   `json:"isp"`
+			Org       string   `json:"org"`
+			ASN       string   `json:"asn"`
+			OS        string   `json:"os"`
+			Hostnames []string `json:"hostnames"`
+			Tags      []string `json:"tags"`
+			Vulns     []string `json:"vulns"`
+			Updated   string   `json:"last_update"`
+			Data      []struct {
+				Port      int    `json:"port"`
+				Transport string `json:"transport"`
+				Product   string `json:"product"`
+				Version   string `json:"version"`
+				Banner    string `json:"data"`
+				Shodan    struct {
+					Module string `json:"module"`
+				} `json:"_shodan"`
+			} `json:"data"`
+		}
+
+		u := e.BaseURL + "/shodan/host/" + url.PathEscape(props.Str(in.Properties, "address")) + "?key=" + key
+		found, err := httpx.GetJSON(ctx, x, u, header, &answer)
+		if err != nil {
+			var se httpx.StatusError
+			if errors.As(err, &se) && (se.Code == http.StatusUnauthorized || se.Code == http.StatusForbidden) {
+				return errors.New("the Shodan key was refused: it is wrong or its plan has no API access")
+			}
+
+			x.Warn("%s: %v", in.Label, err)
+
+			continue
+		}
+
+		if !found {
+			x.Info("%s: Shodan has not seen it", in.Label)
+
+			continue
+		}
+
+		extra := map[string]any{}
+		fill := func(field string, v any) {
+			if old := in.Properties[field]; old == nil || old == "" {
+				extra[field] = v
+			}
+		}
+
+		if answer.Country != "" {
+			fill("country", answer.Country)
+		}
+
+		if answer.City != "" {
+			fill("city", answer.City)
+		}
+
+		if answer.Latitude != nil && answer.Longitude != nil {
+			fill("latitude", *answer.Latitude)
+			fill("longitude", *answer.Longitude)
+		}
+
+		if isp := cmp.Or(answer.ISP, answer.Org); isp != "" {
+			fill("isp", isp)
+		}
+
+		if answer.ASN != "" {
+			extra["asn"] = answer.ASN
+		}
+
+		if answer.OS != "" {
+			extra["shodan_os"] = answer.OS
+		}
+
+		if len(answer.Tags) > 0 {
+			extra["shodan_tags"] = answer.Tags
+		}
+
+		if answer.Updated != "" {
+			extra["shodan_last_update"] = answer.Updated
+		}
+
+		if len(extra) > 0 {
+			if _, err := layOver(ctx, x, in, extra); err != nil {
+				x.Warn("%s: %v", in.Label, err)
+			}
+		}
+
+		for _, s := range answer.Data {
+			port := map[string]any{"number": s.Port, "protocol": strings.ToUpper(cmp.Or(s.Transport, "tcp")), "state": "open"}
+			if service := strings.TrimSpace(s.Product + " " + s.Version); service != "" {
+				port["service"] = service
+			} else if s.Shodan.Module != "" {
+				port["service"] = s.Shodan.Module
+			}
+
+			if banner := strings.TrimSpace(s.Banner); banner != "" {
+				port["banner"] = truncate(banner, shodanBannerMax)
+			}
+
+			if _, err := x.NodeAndLink(ctx, in, "HAS_PORT", "port", port); err != nil {
+				x.Warn("%s: port %d: %v", in.Label, s.Port, err)
+			}
+		}
+
+		for _, name := range answer.Hostnames {
+			if _, err := x.NodeAndLink(ctx, in, "REVERSE_RESOLVES_TO", "domain", map[string]any{"domain": name}); err != nil {
+				x.Warn("%s: %s: %v", in.Label, name, err)
+			}
+		}
+
+		for _, id := range answer.Vulns {
+			if _, err := x.NodeAndLink(ctx, in, "REFERENCES", "cve", map[string]any{"id": id}); err != nil {
+				x.Warn("%s: %s: %v", in.Label, id, err)
+			}
+		}
+
+		x.Found("%s: %d services, %d CVEs", in.Label, len(answer.Data), len(answer.Vulns))
+	}
+
+	return nil
+}
+
+// truncate cuts s to at most n bytes on a rune boundary.
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+
+	return s[:n]
 }

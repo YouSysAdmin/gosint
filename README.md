@@ -30,11 +30,11 @@ The `./skills` catalog includes the skill that will simplify a development of tr
 
 **Transforms and flows**
 
-- 56 built-in transforms: DNS, WHOIS, certificates, subdomains, ASN
+- 66 built-in transforms: DNS, WHOIS, certificates, subdomains, ASN
   and CIDR, ports (Shodan InternetDB, or nmap on the server),
-  reputation (AbuseIPDB, GreyNoise, VirusTotal, Censys, SecurityTrails,
-  Hunter, urlscan), breaches (DeHashed), infostealers (HudsonRock),
-  usernames across sites, crypto wallets, CVEs from the NVD with EPSS
+  reputation (AbuseIPDB, GreyNoise, VirusTotal, Censys, Shodan,
+  SecurityTrails, Hunter, urlscan), breaches (DeHashed), infostealers
+  (HudsonRock), usernames across sites, crypto wallets, CVEs from the NVD with EPSS
   and KEV, geocoding, and the entities an entity's own fields name.
 - Filters that narrow a set between flow steps: drop CDN ranges,
   private addresses, dead hosts, non-root domains.

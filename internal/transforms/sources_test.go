@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/yousysadmin/gosint/internal/core/transform"
+	"github.com/yousysadmin/gosint/internal/core/types"
+	graphmodel "github.com/yousysadmin/gosint/internal/models/graph"
 	"github.com/yousysadmin/gosint/internal/transforms/domain"
 	"github.com/yousysadmin/gosint/internal/transforms/ip"
 )
@@ -44,6 +47,13 @@ func TestReputationSourcesEnrichAndFlagAnAddress(t *testing.T) {
 			}
 			_, _ = w.Write([]byte(`{"result":{"services":[{"port":22,"service_name":"SSH","transport_protocol":"TCP"},{"port":443,"service_name":"HTTP","transport_protocol":"TCP"}],"location":{"country":"Netherlands","city":"Amsterdam"},"autonomous_system":{"asn":64496,"name":"Example AS"}}}`))
 		},
+		"/shodan/host/": func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Query().Get("key") != "sh" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			_, _ = w.Write([]byte(`{"country_name":"Germany","city":"Berlin","latitude":52.5,"longitude":13.4,"asn":"AS64496","os":"Linux","tags":["vpn"],"hostnames":["mail.example.com"],"vulns":["CVE-2023-38408"],"last_update":"2026-10-03T00:00:00","data":[{"port":22,"transport":"tcp","product":"OpenSSH","version":"8.9","data":"SSH-2.0-OpenSSH_8.9","_shodan":{"module":"ssh"}},{"port":8080,"transport":"tcp","_shodan":{"module":"http"}}]}`))
+		},
 	}), "/")
 
 	addr := h.node("ip", map[string]any{"address": "203.0.113.9"})
@@ -71,7 +81,34 @@ func TestReputationSourcesEnrichAndFlagAnAddress(t *testing.T) {
 		t.Errorf("after Censys: props %v", got.Properties)
 	}
 
-	h.expectEdges("203.0.113.9 -HAS_PORT-> 22 ssh (TCP)", "203.0.113.9 -HAS_PORT-> 443 http (TCP)")
+	h.run(ip.IPToShodan{BaseURL: base}, map[string]string{"SHODAN_API_KEY": "sh"}, *got)
+	got, _ = h.st.Graph.Node(t.Context(), h.sketch, addr.ID)
+	if got.Flag != "red" || got.Properties["city"] != "Amsterdam" || got.Properties["shodan_os"] != "Linux" || got.Properties["latitude"] != 52.5 {
+		t.Errorf("after Shodan: flag %q, props %v", got.Flag, got.Properties)
+	}
+
+	h.expectEdges("203.0.113.9 -HAS_PORT-> 22 OpenSSH 8.9 (TCP)", "203.0.113.9 -HAS_PORT-> 443 http (TCP)",
+		"203.0.113.9 -HAS_PORT-> 8080 http (TCP)", "203.0.113.9 -REVERSE_RESOLVES_TO-> mail.example.com",
+		"203.0.113.9 -REFERENCES-> CVE-2023-38408")
+}
+
+// A key Shodan refuses fails the run instead of warning per address.
+func TestShodanRefusedKeyFailsTheRun(t *testing.T) {
+	h := newHarness(t)
+	base := strings.TrimSuffix(api(t, map[string]func(http.ResponseWriter, *http.Request){
+		"/shodan/host/": func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusUnauthorized)
+		},
+	}), "/")
+
+	addr := h.node("ip", map[string]any{"address": "203.0.113.9"})
+	x := transform.NewExec(transform.ExecConfig{
+		SketchID: h.sketch, Graph: h.st.Graph, Types: types.Builtin(), Log: &h.log,
+		Params: map[string]string{"SHODAN_API_KEY": "bad"}, HTTP: transform.DefaultHTTPClient("gosint-test"),
+	})
+	if err := (ip.IPToShodan{BaseURL: base}).Run(t.Context(), x, []graphmodel.Node{addr}); err == nil {
+		t.Fatal("a refused key did not fail the run")
+	}
 }
 
 // The domain sources draw what they know around the domain: scanned

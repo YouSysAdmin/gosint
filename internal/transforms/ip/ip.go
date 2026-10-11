@@ -391,6 +391,7 @@ func All() []transform.Transform {
 		IPToGreyNoise{BaseURL: GreyNoiseURL},
 		IPToVirusTotal{BaseURL: VirusTotalURL},
 		IPToCensys{BaseURL: CensysURL},
+		IPToShodan{BaseURL: ShodanURL},
 		IPToDomain{CrtshURL: crtsh.URL},
 		IPToInfos{BaseURL: IPAPIURL},
 		IPToASN{Client: ripestat.Public},
