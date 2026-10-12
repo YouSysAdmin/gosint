@@ -10,10 +10,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/yousysadmin/gosint/internal/core/sandbox"
 	"github.com/yousysadmin/gosint/internal/desktop"
 )
 
 func main() {
+	// A transform file's script is started through this binary, which
+	// confines it and does not come back.
+	sandbox.Main()
+
 	// Sets the UTC time zone and ignores the machine's settings.
 	time.Local = time.UTC
 

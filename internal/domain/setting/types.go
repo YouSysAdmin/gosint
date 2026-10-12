@@ -57,6 +57,21 @@ type ToolView struct {
 	Path         string `json:"path"`
 	AllowPrivate bool   `json:"allow_private"`
 	Found        string `json:"found"`
+
+	// PrivateSwitch is whether the private address switch applies.
+	PrivateSwitch bool `json:"private_switch"`
+
+	// Sandbox is the scripts tool's confinement, absent for the others.
+	Sandbox *SandboxView `json:"sandbox,omitempty"`
+}
+
+// SandboxView is the script sandbox as the panel sees it. Supported is
+// this node's answer, Enabled what scripts run with now.
+type SandboxView struct {
+	Enabled    bool     `json:"enabled"`
+	Supported  bool     `json:"supported"`
+	ReadPaths  []string `json:"read_paths"`
+	WritePaths []string `json:"write_paths"`
 }
 
 type toolsResponse struct {

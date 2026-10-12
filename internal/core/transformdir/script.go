@@ -13,6 +13,7 @@ import (
 	"maps"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -20,6 +21,8 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
+	"github.com/yousysadmin/gosint/internal/core/sandbox"
+	"github.com/yousysadmin/gosint/internal/core/tool"
 	"github.com/yousysadmin/gosint/internal/core/transform"
 	"github.com/yousysadmin/gosint/internal/core/types"
 	graphmodel "github.com/yousysadmin/gosint/internal/models/graph"
@@ -163,12 +166,20 @@ func (s Script) Meta() transform.Meta {
 // Run runs the script once per input. A failed run is logged and the
 // next input goes on, a cancelled scan stops.
 func (s Script) Run(ctx context.Context, x *transform.Exec, inputs []graphmodel.Node) error {
+	// Switched on where it cannot work, nothing runs: no silent fallback
+	// to an unconfined script.
+	jail := x.Tools.Get(tool.ScriptsName)
+	confined := jail.Confined(sandbox.Supported())
+	if confined && !sandbox.Supported() {
+		return fmt.Errorf("%w, switch it off on the Tools page to run scripts unconfined", sandbox.ErrUnsupported)
+	}
+
 	for _, in := range inputs {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 
-		if err := s.one(ctx, x, in); err != nil {
+		if err := s.one(ctx, x, in, confined, jail); err != nil {
 			x.Warn("%s: %s: %v", s.M.Name, in.Label, err)
 		}
 	}
@@ -201,14 +212,42 @@ type line struct {
 	Level      string         `json:"level"`
 }
 
-func (s Script) one(ctx context.Context, x *transform.Exec, in graphmodel.Node) error {
+func (s Script) one(ctx context.Context, x *transform.Exec, in graphmodel.Node, confined bool, jail tool.Entry) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.M.Timeout*float64(time.Second)))
 	defer cancel()
 
 	args := strings.Fields(s.M.Run)
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...) //nolint:gosec // the operator's own manifest
+	env := scrubbedEnv()
+
+	var cmd *exec.Cmd
+
+	if confined {
+		// The run's only writable place, its home and temp dir too, so
+		// caches land there and not in the server's home.
+		scratch, err := os.MkdirTemp("", "gosint-script-*")
+		if err != nil {
+			return err
+		}
+
+		defer os.RemoveAll(scratch) //nolint:errcheck // best effort, the system cleans its temp dir
+
+		dir, err := filepath.Abs(s.Dir)
+		if err != nil {
+			return err
+		}
+
+		cmd, err = sandbox.Command(ctx, sandbox.Default(dir, scratch, jail.ReadPaths, jail.WritePaths), args)
+		if err != nil {
+			return err
+		}
+
+		env = withScratch(env, scratch)
+	} else {
+		cmd = exec.CommandContext(ctx, args[0], args[1:]...) //nolint:gosec // the operator's own manifest
+	}
+
 	cmd.Dir = s.Dir
-	cmd.Env = scrubbedEnv()
+	cmd.Env = env
 	ownGroup(cmd)
 
 	// A stopped script's children may hold the pipes open, this is how
@@ -415,6 +454,20 @@ func scrubbedEnv() []string {
 	}
 
 	return out
+}
+
+// withScratch points the home and the temp dir at a confined run's
+// scratch directory.
+func withScratch(env []string, scratch string) []string {
+	out := make([]string, 0, len(env)+4)
+	for _, kv := range env {
+		name, _, _ := strings.Cut(kv, "=")
+		if !slices.Contains([]string{"HOME", "TMPDIR", "TMP", "TEMP"}, name) {
+			out = append(out, kv)
+		}
+	}
+
+	return append(out, "HOME="+scratch, "TMPDIR="+scratch, "TMP="+scratch, "TEMP="+scratch)
 }
 
 // passedEnv is what a script inherits from the server's environment,

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 // The tools the transforms use: a program's path, so nothing depends
 // on the server's PATH, and each tool's own switch to reach private
-// addresses, for a lab. Where the program is found is this node's
-// answer, every node of a team install needs the same paths.
+// addresses, for a lab. The scripts of transform files get a sandbox
+// instead, with the paths it lets through. Where a program is found and
+// whether the sandbox works are this node's answers, every node of a
+// team install needs the same settings.
 import { onMounted, ref } from 'vue'
 import { getTools, saveTools } from '@/api/admin'
 import { apiErrorMessage } from '@/api/client'
-import type { ToolSetting } from '@/api/types'
+import type { ToolInput, ToolSetting } from '@/api/types'
 import FormField from '@/components/FormField.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AdminNav from '@/views/admin/AdminNav.vue'
@@ -16,9 +18,39 @@ const toast = useNotificationStore()
 const tools = ref<ToolSetting[]>([])
 const busy = ref(false)
 
+// The path lists as typed, one per line, by tool name.
+const reads = ref<Record<string, string>>({})
+const writes = ref<Record<string, string>>({})
+
+function take(list: ToolSetting[]) {
+  tools.value = list
+  for (const t of list) {
+    if (!t.sandbox) continue
+    reads.value[t.name] = t.sandbox.read_paths.join('\n')
+    writes.value[t.name] = t.sandbox.write_paths.join('\n')
+  }
+}
+
+function lines(text: string | undefined): string[] {
+  return (text ?? '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+}
+
+function input(t: ToolSetting): ToolInput {
+  const out: ToolInput = { path: t.path.trim(), allow_private: t.allow_private }
+  if (t.sandbox) {
+    out.sandbox = t.sandbox.enabled
+    out.read_paths = lines(reads.value[t.name])
+    out.write_paths = lines(writes.value[t.name])
+  }
+  return out
+}
+
 async function load() {
   try {
-    tools.value = await getTools()
+    take(await getTools())
   } catch (err) {
     toast.error(apiErrorMessage(err))
   }
@@ -27,11 +59,7 @@ async function load() {
 async function save() {
   busy.value = true
   try {
-    tools.value = await saveTools(
-      Object.fromEntries(
-        tools.value.map((t) => [t.name, { path: t.path.trim(), allow_private: t.allow_private }]),
-      ),
-    )
+    take(await saveTools(Object.fromEntries(tools.value.map((t) => [t.name, input(t)]))))
     toast.success('Tools saved')
   } catch (err) {
     toast.error(apiErrorMessage(err))
@@ -74,14 +102,44 @@ onMounted(load)
             maxlength="1024"
           />
         </FormField>
-        <label class="checkbox-label">
-          <input v-model="t.allow_private" type="checkbox" />
-          May reach private addresses (loopback, private ranges, link-local), for a lab
-        </label>
-        <p class="text-xs text-muted hint">
-          Off, a sketch cannot reach the network the server sits in. A cloud's metadata service
-          stays refused either way.
-        </p>
+        <template v-if="t.private_switch">
+          <label class="checkbox-label">
+            <input v-model="t.allow_private" type="checkbox" />
+            May reach private addresses (loopback, private ranges, link-local), for a lab
+          </label>
+          <p class="text-xs text-muted hint">
+            Off, a sketch cannot reach the network the server sits in. A cloud's metadata service
+            stays refused either way.
+          </p>
+        </template>
+        <template v-if="t.sandbox">
+          <label class="checkbox-label">
+            <input v-model="t.sandbox.enabled" type="checkbox" />
+            Run scripts in the sandbox
+            <span v-if="t.sandbox.supported" class="badge badge-success ml-2">available here</span>
+            <span v-else class="badge badge-warning ml-2">not available on this node</span>
+          </label>
+          <p v-if="t.sandbox.supported" class="text-xs text-muted hint">
+            A script reads the system, its own directory and the paths below, writes only a scratch
+            directory of its own, and never reaches the server's data, config or environment. Its
+            network is not limited.
+          </p>
+          <p v-else class="text-xs text-muted hint">
+            The sandbox needs Linux with Landlock (5.13 or newer). Here scripts run as the server's
+            own user and can read whatever it can. Switched on, they refuse to run.
+          </p>
+          <div v-if="t.sandbox.enabled" class="paths">
+            <FormField
+              label="May also read"
+              hint="Absolute paths, one per line, a wordlist or a database"
+            >
+              <textarea v-model="reads[t.name]" class="form-input code-font" rows="3"></textarea>
+            </FormField>
+            <FormField label="May also write" hint="Absolute paths, one per line">
+              <textarea v-model="writes[t.name]" class="form-input code-font" rows="2"></textarea>
+            </FormField>
+          </div>
+        </template>
       </div>
       <div class="flex justify-end">
         <button class="btn btn-primary" :disabled="busy">Save</button>
@@ -105,5 +163,9 @@ onMounted(load)
 
 .hint {
   margin-left: 24px;
+}
+
+.paths {
+  margin: 8px 0 0 24px;
 }
 </style>

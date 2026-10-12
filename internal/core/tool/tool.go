@@ -37,6 +37,25 @@ type Entry struct {
 	// addresses, for a lab (TryHackMe, HackTheBox, a home network). Off,
 	// a sketch cannot read the network the server sits in.
 	AllowPrivate bool `json:"allow_private"`
+
+	// Sandbox confines a transform file's script, nil is this node's
+	// default: on where it can be.
+	Sandbox *bool `json:"sandbox,omitempty"`
+
+	// ReadPaths and WritePaths are what a confined script may read or
+	// write beyond the system and its own directory, absolute.
+	ReadPaths  []string `json:"read_paths,omitempty"`
+	WritePaths []string `json:"write_paths,omitempty"`
+}
+
+// Confined tells whether scripts run in the sandbox: as set, else on
+// exactly where the node supports it.
+func (e Entry) Confined(supported bool) bool {
+	if e.Sandbox != nil {
+		return *e.Sandbox
+	}
+
+	return supported
 }
 
 // Settings are every tool's entries by name.
@@ -116,3 +135,24 @@ func (Web) Description() string {
 
 // Binary implements Tool.
 func (Web) Binary() string { return "" }
+
+// ScriptsName names the settings of transform files' scripts.
+const ScriptsName = "scripts"
+
+// Scripts is the programs transform files run. No program of its own
+// and no network switch: the sandbox and the paths it lets through.
+type Scripts struct{}
+
+// Name implements Tool.
+func (Scripts) Name() string { return ScriptsName }
+
+// Title implements Tool.
+func (Scripts) Title() string { return "Transform file scripts" }
+
+// Description implements Tool.
+func (Scripts) Description() string {
+	return "The scripts that transform files with a run line start, confined to the paths they need"
+}
+
+// Binary implements Tool.
+func (Scripts) Binary() string { return "" }
