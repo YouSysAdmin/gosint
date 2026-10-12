@@ -10,6 +10,7 @@ import type {
   LlmModelInput,
   MailSettings,
   MailSettingsInput,
+  ToolInput,
   ToolSetting,
   WorkerSettings,
 } from './types'

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yousysadmin/gosint/internal/core/sandbox"
+	"github.com/yousysadmin/gosint/internal/core/tool"
 	"github.com/yousysadmin/gosint/internal/database/dbtest"
 )
 
@@ -267,5 +269,62 @@ func TestAFreshInstallAsksForSetup(t *testing.T) {
 	nobody.expect(http.StatusOK, "GET", "/api/auth/info", nil, &info)
 	if info.SetupRequired {
 		t.Fatal("an install with an account still asks for setup")
+	}
+}
+
+// The scripts of transform files get a sandbox switch and the paths it
+// lets through, absolute only, and no network switch of their own.
+func TestAnAdministratorConfinesTheScripts(t *testing.T) {
+	srv, rt := newAPIRuntime(t, dbtest.SQLite(t))
+	alice := signUp(t, srv, "alice@example.com")
+
+	type box struct {
+		Enabled   bool     `json:"enabled"`
+		Supported bool     `json:"supported"`
+		ReadPaths []string `json:"read_paths"`
+	}
+
+	type view struct {
+		Tools []struct {
+			Name          string `json:"name"`
+			PrivateSwitch bool   `json:"private_switch"`
+			Sandbox       *box   `json:"sandbox"`
+		} `json:"tools"`
+	}
+
+	scripts := func(v view) (bool, *box) {
+		for _, tl := range v.Tools {
+			if tl.Name == tool.ScriptsName {
+				return tl.PrivateSwitch, tl.Sandbox
+			}
+		}
+
+		t.Fatalf("no scripts tool in %+v", v.Tools)
+
+		return false, nil
+	}
+
+	var got view
+
+	alice.expect(http.StatusOK, "GET", "/api/admin/settings/tools", nil, &got)
+
+	private, b := scripts(got)
+	if private || b == nil || b.Supported != sandbox.Supported() || b.Enabled != sandbox.Supported() {
+		t.Fatalf("scripts = %v %+v, want the sandbox on exactly where supported", private, b)
+	}
+
+	alice.expect(http.StatusBadRequest, "PUT", "/api/admin/settings/tools", map[string]any{"tools": map[string]any{
+		"scripts": map[string]any{"sandbox": true, "read_paths": []string{"wordlists"}}}})
+
+	alice.expect(http.StatusOK, "PUT", "/api/admin/settings/tools", map[string]any{"tools": map[string]any{
+		"scripts": map[string]any{"sandbox": false, "allow_private": true, "read_paths": []string{" /srv/lists/ ", ""}}}}, &got)
+
+	e := rt.ToolSettings.Get().Get(tool.ScriptsName)
+	if e.Sandbox == nil || *e.Sandbox || e.AllowPrivate || len(e.ReadPaths) != 1 || e.ReadPaths[0] != "/srv/lists" {
+		t.Fatalf("stored = %+v", e)
+	}
+
+	if _, b := scripts(got); b.Enabled {
+		t.Error("the sandbox reads as on after being switched off")
 	}
 }

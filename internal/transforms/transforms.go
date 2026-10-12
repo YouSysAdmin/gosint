@@ -41,7 +41,7 @@ import (
 // Tools is every tool the built-in transforms use, set by an
 // administrator under Tools.
 func Tools() []tool.Tool {
-	return []tool.Tool{tool.Web{}, nmap.Tool{}}
+	return []tool.Tool{tool.Web{}, nmap.Tool{}, tool.Scripts{}}
 }
 
 // All is every built-in transform, each pointed at its public source.

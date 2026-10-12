@@ -12,6 +12,7 @@ import (
 	"github.com/yousysadmin/gosint/internal/core/access"
 	"github.com/yousysadmin/gosint/internal/core/env"
 	"github.com/yousysadmin/gosint/internal/core/response"
+	"github.com/yousysadmin/gosint/internal/core/sandbox"
 	"github.com/yousysadmin/gosint/internal/core/tool"
 	"github.com/yousysadmin/gosint/internal/core/validation"
 )
@@ -29,9 +30,14 @@ func (h Handler) toolViews(s tool.Settings) toolsResponse {
 	for _, t := range h.Runtime.Tools.All() {
 		e := s.Get(t.Name())
 		v := ToolView{Name: t.Name(), Title: t.Title(), Description: t.Description(), Binary: t.Binary(),
-			Path: e.Path, AllowPrivate: e.AllowPrivate}
+			Path: e.Path, AllowPrivate: e.AllowPrivate, PrivateSwitch: t.Name() != tool.ScriptsName}
 		if t.Binary() != "" {
 			v.Found, _ = s.Locate(t)
+		}
+
+		if t.Name() == tool.ScriptsName {
+			v.Sandbox = &SandboxView{Enabled: e.Confined(sandbox.Supported()), Supported: sandbox.Supported(),
+				ReadPaths: nonNil(e.ReadPaths), WritePaths: nonNil(e.WritePaths)}
 		}
 
 		out.Tools = append(out.Tools, v)
@@ -80,6 +86,23 @@ func (h Handler) PutTools(c fiber.Ctx) error {
 			return refuse(c, "tools."+name+".path", "abs", "the path of "+t.Title()+" must be absolute")
 		}
 
+		if name != tool.ScriptsName {
+			e.Sandbox, e.ReadPaths, e.WritePaths = nil, nil, nil
+		} else {
+			e.AllowPrivate = false
+
+			var field string
+
+			e.ReadPaths, field = cleanPaths(e.ReadPaths, "read_paths")
+			if field == "" {
+				e.WritePaths, field = cleanPaths(e.WritePaths, "write_paths")
+			}
+
+			if field != "" {
+				return refuse(c, "tools."+name+"."+field, "abs", "every path a script may reach must be absolute")
+			}
+		}
+
 		s[name] = e
 	}
 
@@ -90,4 +113,40 @@ func (h Handler) PutTools(c fiber.Ctx) error {
 	h.Runtime.ToolSettings.Set(s)
 
 	return response.Success(c, h.toolViews(s))
+}
+
+// maxPaths bounds the extra paths a script may be given.
+const maxPaths = 64
+
+// cleanPaths trims and drops empty lines, and names field when a path
+// is not absolute or there are too many.
+func cleanPaths(in []string, field string) ([]string, string) {
+	var out []string
+
+	for _, p := range in {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+
+		if !filepath.IsAbs(p) || len(p) > 1024 {
+			return nil, field
+		}
+
+		out = append(out, filepath.Clean(p))
+	}
+
+	if len(out) > maxPaths {
+		return nil, field
+	}
+
+	return out, ""
+}
+
+func nonNil(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+
+	return s
 }

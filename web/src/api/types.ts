@@ -553,6 +553,24 @@ export interface ToolSetting {
   path: string
   allow_private: boolean
   found: string
+  // private_switch is whether the private address switch applies.
+  private_switch: boolean
+  // sandbox is the scripts tool's confinement, supported is this node's.
+  sandbox?: {
+    enabled: boolean
+    supported: boolean
+    read_paths: string[]
+    write_paths: string[]
+  }
+}
+
+// ToolInput is one tool's settings as saved.
+export interface ToolInput {
+  path: string
+  allow_private: boolean
+  sandbox?: boolean
+  read_paths?: string[]
+  write_paths?: string[]
 }
 
 // FileStore is where the bytes of attached files live, with the
