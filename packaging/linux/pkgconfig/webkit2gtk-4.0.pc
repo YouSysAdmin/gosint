@@ -1,0 +1,6 @@
+# webview_go asks pkg-config for webkit2gtk-4.0, which current distros
+# replaced with 4.1. The C API the window uses is the same in both.
+Name: webkit2gtk-4.0
+Description: webkit2gtk-4.1 under the name webview_go asks for
+Version: 2.40.0
+Requires: webkit2gtk-4.1 gtk+-3.0

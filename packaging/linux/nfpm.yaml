@@ -1,0 +1,24 @@
+# Gosint, Copyright (c) 2026 YouSysAdmin
+#
+# The desktop app as a .deb, built by scripts/desktop-package.sh with
+# VERSION and ARCH in the environment.
+name: gosint-desktop
+version: ${VERSION}
+arch: ${ARCH}
+maintainer: YouSysAdmin
+description: OSINT graph exploration in a desktop window
+homepage: https://github.com/YouSysAdmin/gosint
+license: MIT
+depends:
+  - libwebkit2gtk-4.1-0
+  - libgtk-3-0
+recommends:
+  - zenity
+  - xdg-utils
+contents:
+  - src: ./bin/gosint-desktop
+    dst: /usr/bin/gosint-desktop
+  - src: ./packaging/linux/gosint.desktop
+    dst: /usr/share/applications/gosint.desktop
+  - src: ./packaging/icon.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/gosint.svg

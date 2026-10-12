@@ -1070,6 +1070,18 @@ onBeforeUnmount(() => {
   color: #fff;
 }
 
+/* The backdrop is dark in both themes, the buttons follow it. */
+.lightbox-bar .btn-secondary {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.lightbox-bar .btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
 .panel {
   padding: 16px;
 }

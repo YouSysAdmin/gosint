@@ -237,6 +237,7 @@ func registerAPI(api fiber.Router, rt *env.Runtime) {
 	api.Get("/admin/settings/files", session, requireAdmin, settingH.GetFiles)
 	api.Put("/admin/settings/files", session, requireAdmin, settingH.PutFiles)
 	api.Post("/admin/seal", session, requireAdmin, sysH.Seal)
+	api.Get("/admin/release", session, requireAdmin, consoleH.Release)
 	api.Get("/admin/jobs", session, requireAdmin, jobsH.List)
 	api.Post("/admin/jobs/:name/run", session, requireAdmin, jobsH.Run)
 	api.Get("/investigations/:id/members", session, inv(invmodel.ActionRead), invH.Members)

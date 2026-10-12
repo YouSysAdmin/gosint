@@ -4,6 +4,8 @@
 // a spreadsheet would read as a formula (a leading =, +, -, @, tab or
 // return) gets a quote in front: a label a crawler brought back must
 // open as text, not run.
+import { saveBlob } from './download'
+
 const formula = /^[=+\-@\t\r]/
 
 export function toCSV(columns: string[], rows: unknown[][]): string {
@@ -16,11 +18,5 @@ export function toCSV(columns: string[], rows: unknown[][]): string {
 }
 
 export function downloadCSV(name: string, columns: string[], rows: unknown[][]) {
-  const blob = new Blob(['\ufeff' + toCSV(columns, rows)], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  a.click()
-  URL.revokeObjectURL(url)
+  saveBlob(new Blob(['\ufeff' + toCSV(columns, rows)], { type: 'text/csv;charset=utf-8' }), name)
 }

@@ -21,3 +21,6 @@ web/node_modules/
 
 # Browser automation artifacts
 .playwright-mcp/
+
+# Windows resources made by scripts/desktop-package.sh
+*.syso

@@ -90,3 +90,7 @@ console:
   # the points on a blank background, with no tile server reached.
   map_style_light: https://tiles.openfreemap.org/styles/positron
   map_style_dark: https://tiles.openfreemap.org/styles/dark
+  # Ask GitHub for a newer stable release when an administrator opens
+  # the console (at most twice a day, pre-releases ignored) and show a
+  # badge beside the account menu. false sends nothing.
+  update_check: true
