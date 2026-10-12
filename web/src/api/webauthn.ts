@@ -5,6 +5,8 @@
 // ArrayBuffers. These helpers convert between the two so nothing else
 // in the console has to know that.
 
+import { isDesktop } from '@/composables/desktop'
+
 function b64uToBuf(s: string): ArrayBuffer {
   const t = s.replace(/-/g, '+').replace(/_/g, '/')
   const pad = t.length % 4 ? '='.repeat(4 - (t.length % 4)) : ''
@@ -38,6 +40,8 @@ export function supported(): boolean {
  * the API and still have no authenticator to offer.
  */
 export async function available(): Promise<boolean> {
+  // The desktop window has no authenticator to offer.
+  if (isDesktop()) return false
   if (!supported()) return false
   try {
     const probe = window.PublicKeyCredential.isConditionalMediationAvailable

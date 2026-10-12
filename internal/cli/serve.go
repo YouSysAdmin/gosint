@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,6 +23,7 @@ import (
 	"github.com/yousysadmin/gosint/internal/core/live"
 	"github.com/yousysadmin/gosint/internal/core/mailer"
 	"github.com/yousysadmin/gosint/internal/core/oidc"
+	"github.com/yousysadmin/gosint/internal/core/release"
 	"github.com/yousysadmin/gosint/internal/core/tlsconf"
 	"github.com/yousysadmin/gosint/internal/core/tool"
 	"github.com/yousysadmin/gosint/internal/core/transform"
@@ -41,6 +44,9 @@ import (
 
 // shutdownTimeout bounds how long in-flight requests get on stop.
 const shutdownTimeout = 15 * time.Second
+
+// releaseTimeout bounds the request asking GitHub for a release.
+const releaseTimeout = 15 * time.Second
 
 func newServeCmd() *cobra.Command {
 	var skipMigrate bool
@@ -68,6 +74,25 @@ func runServe(ctx context.Context, configPath string, skipMigrate bool) error {
 		return err
 	}
 
+	return RunNode(ctx, cfg, NodeOptions{SkipMigrate: skipMigrate})
+}
+
+// NodeOptions changes how RunNode starts, for a program embedding a
+// node such as the desktop app.
+type NodeOptions struct {
+	// SkipMigrate verifies the schema instead of migrating it.
+	SkipMigrate bool
+
+	// Listener, when set, is served in place of server.addr.
+	Listener net.Listener
+
+	// Ready is called once the server is about to answer.
+	Ready func()
+}
+
+// RunNode runs the API, the console and the worker on cfg until ctx
+// ends or a signal arrives.
+func RunNode(ctx context.Context, cfg *env.Config, opts NodeOptions) error {
 	if err := cfg.Validate(); err != nil {
 		return usage("invalid config: %w", err)
 	}
@@ -90,7 +115,7 @@ func runServe(ctx context.Context, configPath string, skipMigrate bool) error {
 
 	defer db.Close() //nolint:errcheck // closing on exit
 
-	if skipMigrate {
+	if opts.SkipMigrate {
 		err = schema.RequireCurrent(ctx, db)
 	} else {
 		err = schema.Migrate(ctx, db)
@@ -129,6 +154,14 @@ func runServe(ctx context.Context, configPath string, skipMigrate bool) error {
 		Mail:       mailer.NewSwitch(log),
 		OAuth:      oidc.NewRegistry(cfg.Server.PublicURL),
 		Cron:       cron.New(log),
+	}
+
+	if cfg.Console.UpdateCheck {
+		rt.Release = &release.Checker{
+			Current: pkg.Version,
+			Client:  &http.Client{Timeout: releaseTimeout},
+			Agent:   pkg.AppName + "/" + pkg.Version,
+		}
 	}
 
 	rt.TargetHTTP = transform.TargetHTTPClient(pkg.AppName+"/"+pkg.Version, func() bool {
@@ -242,7 +275,19 @@ func runServe(ctx context.Context, configPath string, skipMigrate bool) error {
 	}
 
 	errc := make(chan error, 1)
-	go func() { errc <- srv.Start() }()
+	go func() {
+		if opts.Listener != nil {
+			errc <- srv.Serve(opts.Listener)
+
+			return
+		}
+
+		errc <- srv.Start()
+	}()
+
+	if opts.Ready != nil {
+		opts.Ready()
+	}
 
 	select {
 	case err := <-errc:

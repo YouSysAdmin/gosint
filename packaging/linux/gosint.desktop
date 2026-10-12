@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=gosint
+Comment=OSINT graph exploration
+Exec=gosint-desktop
+Icon=gosint
+Terminal=false
+Categories=Network;Security;
+StartupWMClass=gosint-desktop

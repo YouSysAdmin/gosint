@@ -6,12 +6,14 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/yousysadmin/gosint/internal/core/cron"
 	"github.com/yousysadmin/gosint/internal/core/env"
+	"github.com/yousysadmin/gosint/internal/core/release"
 	"github.com/yousysadmin/gosint/internal/core/types"
 	"github.com/yousysadmin/gosint/internal/database/dbtest"
 )
@@ -285,4 +287,33 @@ func TestAFailedJobKeepsItsErrorOffTheWire(t *testing.T) {
 	if len(list.Jobs) != 1 || !strings.Contains(list.Jobs[0].LastError, "denied") {
 		t.Errorf("jobs = %+v, want the error in last_error", list.Jobs)
 	}
+}
+
+// An administrator is told about a newer stable release, a member is
+// not answered at all.
+func TestAnAdministratorHearsOfANewRelease(t *testing.T) {
+	gh := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"tag_name":"v99.0.0","html_url":"https://example.test/r/v99.0.0"}`))
+	}))
+	defer gh.Close()
+
+	srv, rt := newAPIRuntime(t, dbtest.SQLite(t))
+	rt.Release = &release.Checker{Current: "v1.0.0", URL: gh.URL}
+
+	alice := signUp(t, srv, "alice@example.com")
+	bob := signUp(t, srv, "bob@example.com")
+
+	var st struct {
+		Current   string `json:"current"`
+		Latest    string `json:"latest"`
+		URL       string `json:"url"`
+		Available bool   `json:"available"`
+	}
+
+	alice.expect(http.StatusOK, "GET", "/api/admin/release", nil, &st)
+	if !st.Available || st.Latest != "99.0.0" || st.URL != "https://example.test/r/v99.0.0" {
+		t.Errorf("release = %+v", st)
+	}
+
+	bob.expect(http.StatusForbidden, "GET", "/api/admin/release", nil)
 }

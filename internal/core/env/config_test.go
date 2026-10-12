@@ -151,3 +151,36 @@ func TestTLSBlock(t *testing.T) {
 		t.Errorf("self with no public_url refused: %v", err)
 	}
 }
+
+// A caller's defaults replace the built-in ones, while the file and the
+// environment still win over them.
+func TestCallerDefaultsSitUnderFileAndEnvironment(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	if err := os.WriteFile("gosint.yaml", []byte("logging:\n  level: debug\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("GOSINT_SERVER_ADDR", "127.0.0.1:5000")
+
+	cfg, err := env.Load("", map[string]any{
+		"database.dsn":  "/data/gosint.db",
+		"server.addr":   "127.0.0.1:0",
+		"logging.level": "warn",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.Database.DSN != "/data/gosint.db" {
+		t.Errorf("dsn = %q, the caller's default was not applied", cfg.Database.DSN)
+	}
+
+	if cfg.Server.Addr != "127.0.0.1:5000" {
+		t.Errorf("addr = %q, the environment did not win", cfg.Server.Addr)
+	}
+
+	if cfg.Logging.Level != "debug" {
+		t.Errorf("level = %q, the file did not win", cfg.Logging.Level)
+	}
+}

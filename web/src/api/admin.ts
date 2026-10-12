@@ -64,6 +64,18 @@ export async function revokeSessions(id: string): Promise<number> {
   return (await api.post<{ revoked: number }>(`/admin/users/${id}/revoke-sessions`)).data.revoked
 }
 
+// Release is whether GitHub has a newer stable release than this build.
+export interface Release {
+  current: string
+  latest?: string
+  url?: string
+  available: boolean
+}
+
+export async function latestRelease(): Promise<Release> {
+  return (await api.get<Release>('/admin/release')).data
+}
+
 // The maintenance jobs of the node answering, and one run on request.
 export async function listJobs(): Promise<{ jobs: Job[] }> {
   return (await api.get<{ jobs: Job[] }>('/admin/jobs')).data
@@ -137,9 +149,7 @@ export async function getTools(): Promise<ToolSetting[]> {
   return (await api.get<{ tools: ToolSetting[] }>('/admin/settings/tools')).data.tools
 }
 
-export async function saveTools(
-  tools: Record<string, { path: string; allow_private: boolean }>,
-): Promise<ToolSetting[]> {
+export async function saveTools(tools: Record<string, ToolInput>): Promise<ToolSetting[]> {
   return (await api.put<{ tools: ToolSetting[] }>('/admin/settings/tools', { tools })).data.tools
 }
 

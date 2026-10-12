@@ -90,7 +90,7 @@ import SketchSettingsDialog from '@/components/sketch/SketchSettingsDialog.vue'
 import LinkDialog from '@/components/sketch/LinkDialog.vue'
 import ImportDialog from '@/components/sketch/ImportDialog.vue'
 import ExportDialog from '@/components/ExportDialog.vue'
-import { saveJSON } from '@/composables/download'
+import { blobOfDataURL, saveBlob, saveJSON } from '@/composables/download'
 import NodePanel from '@/components/sketch/NodePanel.vue'
 import RunDialog from '@/components/sketch/RunDialog.vue'
 import { formatTimeParts } from '@/composables/formatDate'
@@ -819,10 +819,7 @@ function downloadPNG() {
     toast.error('The canvas cannot be exported while an entity shows an image from another site')
     return
   }
-  const a = document.createElement('a')
-  a.href = data
-  a.download = `${sketch.value?.title ?? 'sketch'}.png`
-  a.click()
+  saveBlob(blobOfDataURL(data), `${sketch.value?.title ?? 'sketch'}.png`)
 }
 
 async function cancel(s: Scan) {

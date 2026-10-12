@@ -1,8 +1,10 @@
 <script setup lang="ts">
 // The account menu at the top right: the theme as three icons, the
-// profile and signing out.
+// profile and signing out. An administrator also sees a badge when a
+// newer release is out.
 import { Monitor, Moon, Sun } from 'lucide-vue-next'
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { latestRelease, type Release } from '@/api/admin'
 import { signOut, useAuthStore } from '@/stores/auth'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
 
@@ -10,6 +12,22 @@ const auth = useAuthStore()
 const theme = useThemeStore()
 const open = ref(false)
 const host = ref<HTMLElement | null>(null)
+const release = ref<Release | null>(null)
+
+// A failed check shows nothing, it is a hint and not a feature.
+watch(
+  () => auth.user?.admin,
+  async (admin) => {
+    release.value = null
+    if (!admin) return
+    try {
+      release.value = await latestRelease()
+    } catch {
+      release.value = null
+    }
+  },
+  { immediate: true },
+)
 
 const modes: { value: ThemeMode; icon: typeof Sun; title: string }[] = [
   { value: 'light', icon: Sun, title: 'Light' },
@@ -45,6 +63,15 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="host" class="user">
+    <a
+      v-if="release?.available && release.url"
+      class="badge badge-info update"
+      :href="release.url"
+      target="_blank"
+      rel="noopener noreferrer"
+      :title="`Running ${release.current}, release notes for ${release.latest}`"
+      >Update {{ release.latest }}</a
+    >
     <button class="trigger" :title="auth.user?.email" :aria-expanded="open" @click="open = !open">
       <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" class="avatar" alt="" />
       <span v-else class="avatar initials">{{ initials() }}</span>
@@ -87,6 +114,18 @@ onBeforeUnmount(() => {
 <style scoped>
 .user {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.update {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.update:hover {
+  text-decoration: underline;
 }
 
 .trigger {

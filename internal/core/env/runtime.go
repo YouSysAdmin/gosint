@@ -12,6 +12,7 @@ import (
 	"github.com/yousysadmin/gosint/internal/core/live"
 	"github.com/yousysadmin/gosint/internal/core/mailer"
 	"github.com/yousysadmin/gosint/internal/core/oidc"
+	"github.com/yousysadmin/gosint/internal/core/release"
 	"github.com/yousysadmin/gosint/internal/core/tool"
 	"github.com/yousysadmin/gosint/internal/core/transform"
 	"github.com/yousysadmin/gosint/internal/core/vault"
@@ -78,6 +79,10 @@ type Runtime struct {
 	// Cron runs the maintenance jobs. Always set, every node runs every
 	// job, so a job is a convergent sweep.
 	Cron *cron.Manager
+
+	// Release tells whether a newer release is out. Nil when the check
+	// is off.
+	Release *release.Checker
 }
 
 // StateKey signs the OIDC round-trip cookie, derived from the vault

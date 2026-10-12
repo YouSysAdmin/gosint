@@ -49,6 +49,21 @@ tasks:
     cmds:
       - go build -ldflags "{{.LDFLAGS}}" -o bin/gosint ./cmd/gosint
 
+  # The window links the system web view through cgo, so this builds
+  # for this machine only. Linux needs libwebkit2gtk-4.1-dev, Windows
+  # MinGW gcc (no icon here, desktop-package adds it).
+  desktop:
+    desc: Console plus the desktop app (bin/gosint-desktop)
+    cmds:
+      - task: web
+      - CGO_ENABLED=1 go build -ldflags "{{.LDFLAGS}}{{if eq OS "windows"}} -H windowsgui{{end}}" -o bin/gosint-desktop{{exeExt}} ./cmd/gosint-desktop
+
+  desktop-package:
+    desc: The desktop app packed for this machine into dist/
+    cmds:
+      - task: web
+      - VERSION={{.VERSION}} scripts/desktop-package.sh
+
   dev-up:
     desc: Start the dev postgres on :5434 and wait until it answers
     cmds:

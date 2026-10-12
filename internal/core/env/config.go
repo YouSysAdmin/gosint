@@ -82,6 +82,10 @@ type ConsoleConfig struct {
 	// background, for an install that must not reach a tile server.
 	MapStyleLight string `mapstructure:"map_style_light"`
 	MapStyleDark  string `mapstructure:"map_style_dark"`
+
+	// UpdateCheck asks GitHub for a newer stable release when an
+	// administrator opens the console, at most twice a day.
+	UpdateCheck bool `mapstructure:"update_check"`
 }
 
 // VaultConfig is how the master key everything is sealed under is
@@ -213,7 +217,7 @@ type LoggingConfig struct {
 // Load reads the YAML file at path (or ./gosint.yaml when path is
 // empty), merges in GOSINT_* environment overrides, and returns the
 // resolved Config. A missing file is not an error.
-func Load(path string) (*Config, error) {
+func Load(path string, defaults ...map[string]any) (*Config, error) {
 	v := viper.New()
 	if path != "" {
 		v.SetConfigFile(path)
@@ -248,10 +252,18 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("transforms.dir", "")
 	v.SetDefault("console.map_style_light", "https://tiles.openfreemap.org/styles/positron")
 	v.SetDefault("console.map_style_dark", "https://tiles.openfreemap.org/styles/dark")
+	v.SetDefault("console.update_check", true)
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 	v.SetDefault("logging.output", "stdout")
 	v.SetDefault("logging.color", true)
+
+	// A caller's defaults sit under the file and the environment.
+	for _, d := range defaults {
+		for k, val := range d {
+			v.SetDefault(k, val)
+		}
+	}
 
 	source := "file " + v.ConfigFileUsed()
 	if err := v.ReadInConfig(); err != nil {
