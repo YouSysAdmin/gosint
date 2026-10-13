@@ -16,7 +16,7 @@ type IPToDehashed struct{ dehashed.Client }
 
 // Meta describes the transform.
 func (IPToDehashed) Meta() transform.Meta {
-	return transform.Meta{Name: "ip_to_dehashed", Category: "Ip", Input: "ip", Output: "breach",
+	return transform.Meta{Name: "ip_to_dehashed", Category: "IP", Input: "ip", Output: "breach",
 		Description: "Find the breach records of an IP address in DeHashed and what leaked with it: the password or its hash, names, emails, usernames, phones, IPs.",
 		Params:      dehashed.Params}
 }

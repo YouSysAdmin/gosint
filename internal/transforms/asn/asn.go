@@ -17,7 +17,7 @@ type ASNToCIDRs struct{ ripestat.Client }
 
 // Meta describes the transform.
 func (ASNToCIDRs) Meta() transform.Meta {
-	return transform.Meta{Name: "asn_to_cidrs", Category: "Asn", Input: "asn", Output: "cidr",
+	return transform.Meta{Name: "asn_to_cidrs", Category: "ASN", Input: "asn", Output: "cidr",
 		Description: "List the IP ranges an autonomous system announces (RIPEstat)."}
 }
 

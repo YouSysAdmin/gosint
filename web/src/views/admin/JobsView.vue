@@ -20,12 +20,13 @@ const loading = ref(true)
 const running = ref('')
 
 const what: Record<string, string> = {
-  'blob-release': 'Deletes the bytes of files gone for longer than files.retain_deleted',
-  'undo-journal': 'Drops edits older than files.retain_deleted from the undo history',
+  'blob-release': 'Deletes the bytes of files gone for longer than the file store keeps them',
+  'undo-journal': 'Drops edits older than the file store keeps deleted files from the undo history',
   sessions: 'Removes expired sign-in sessions',
   'password-resets': 'Removes spent and expired password reset links',
   'custom-types': 'Reads the entity types declared on another node',
-  settings: 'Reads the mail relay saved on another node',
+  settings: 'Reads the settings saved on another node',
+  schedules: 'Runs the scheduled flows that are due',
 }
 
 async function load() {

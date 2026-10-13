@@ -31,6 +31,9 @@ func NewRoot() *cobra.Command {
 		},
 	}
 	root.SetFlagErrorFunc(flagError)
+	// The flag prints through the version command's own line. The
+	// template is the line itself, a version holds no template syntax.
+	root.SetVersionTemplate(versionLine())
 	root.PersistentFlags().String("config", "", "config file path (yaml), defaults to ./gosint.yaml")
 
 	root.AddGroup(

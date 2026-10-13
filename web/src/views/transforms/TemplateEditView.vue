@@ -23,7 +23,7 @@ import { useNotificationStore } from '@/stores/notification'
 
 const STARTER = `name: my-lookup
 description: What this template finds
-category: Ip
+category: IP
 version: 1
 input:
   type: ip

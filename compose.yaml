@@ -25,7 +25,7 @@ services:
       # and sends HSTS.
       GOSINT_SERVER_PUBLIC_URL: ${GOSINT_PUBLIC_URL:?set GOSINT_PUBLIC_URL to the console URL}
       # The proxy in front, so the sign-in limiter sees the client
-      # address and not the proxy's. Space separated addresses or CIDRs.
+      # address and not the proxy's. Comma separated addresses or CIDRs.
       GOSINT_SERVER_TRUSTED_PROXIES: ${GOSINT_TRUSTED_PROXIES:-172.16.0.0/12}
       GOSINT_LOGGING_LEVEL: info
       GOSINT_LOGGING_FORMAT: json

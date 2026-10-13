@@ -1,0 +1,104 @@
+# The gosint documentation, published on GitHub Pages by
+# .github/workflows/docs.yaml. `task docs-dev` serves it locally.
+baseURL = "https://yousysadmin.github.io/gosint/"
+title = "gosint"
+locale = "en"
+enableRobotsTXT = true
+
+# The theme is a Hugo module, pinned in go.mod.
+[module]
+[[module.imports]]
+path = "github.com/YouSysAdmin/hugo-docs-theme"
+
+[params]
+brand = "gosint"
+author = "YouSysAdmin"
+description = "Self-hosted OSINT graph exploration"
+copyright = "Released under the MIT license."
+
+sidebarCollapsible = true
+sidebarCollapsed = true
+
+show_footer_project = true
+repoURL = "https://github.com/YouSysAdmin/gosint"
+edit_base = "https://github.com/YouSysAdmin/gosint/edit/master/docs/content/"
+cta_url = "https://github.com/YouSysAdmin/gosint"
+cta_label = "GitHub"
+cta_icon = "github"
+
+externalLinksNewTab = true
+
+landing = true
+tagline = "Map what you find,"
+tagline_sub = "keep it to yourself."
+lead = "Investigations as graphs of typed entities, transforms that expand them, flows that chain the transforms. One binary, your own server, everything encrypted at rest."
+get_started_url = "/gosint/getting-started/"
+features_title = "What it does"
+trust_badges = ["# self-hosted", "# single binary", "# sqlite or postgres", "# encrypted at rest", "# MIT"]
+hero_terminal_title = "gosint"
+hero_terminal_image = "images/screenshot.png"
+hero_terminal_image_alt = "A sketch in the console: the graph of an investigation with a finding selected"
+hero_terminal_image_anchor = "Top"
+
+[[params.features]]
+title = "Graphs of typed entities"
+description = "Domains, addresses, people, organizations, wallets, credentials, findings and more, detected from pasted text. An administrator can declare new types."
+[[params.features]]
+title = "Transforms and flows"
+description = "Built-in transforms for DNS, WHOIS, certificates, ports, reputation, breaches and CVEs, chained into flows that run by hand or on a schedule."
+[[params.features]]
+title = "Your own transforms"
+description = "A YAML template for an HTTP API, or a script in any language dropped into a directory, picked up while the server runs."
+[[params.features]]
+title = "Sealed at rest"
+description = "The graph, files, accounts and secrets are encrypted under a key only the unseal key opens. The server starts sealed."
+[[params.features]]
+title = "Work together"
+description = "Investigations with members and roles, live edits, undo, provenance on every entity, written analyses with mentions."
+[[params.features]]
+title = "An assistant that proposes"
+description = "Ask a model about the selected entities. It looks things up and runs transforms, and proposes changes for you to apply."
+
+[[menu.main]]
+name = "Getting started"
+url = "/getting-started/"
+weight = 10
+[menu.main.params]
+icon = "rocket"
+
+[[menu.main]]
+name = "Guide"
+url = "/guide/"
+weight = 20
+[menu.main.params]
+icon = "book-open"
+
+[[menu.main]]
+name = "Administration"
+url = "/administration/"
+weight = 30
+[menu.main.params]
+icon = "server"
+
+[[menu.main]]
+name = "Reference"
+url = "/reference/"
+weight = 40
+[menu.main.params]
+icon = "file-text"
+
+# Hugo takes neither of these from a theme. The JSON output is the
+# search index.
+[outputs]
+home = ["HTML", "JSON"]
+
+[markup]
+[markup.tableOfContents]
+startLevel = 2
+endLevel = 4
+[markup.highlight]
+style = "github-dark"
+noClasses = true
+tabWidth = 2
+[markup.goldmark.renderer]
+unsafe = true

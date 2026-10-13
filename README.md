@@ -2,7 +2,7 @@
 
 Self-hosted OSINT graph exploration.
 
-![A sketch in the console: the graph of an investigation with a finding selected](docs/screenshot.png)
+![A sketch in the console: the graph of an investigation with a finding selected](docs/assets/images/screenshot.png)
 
 
 ## IMPORTANT

@@ -43,7 +43,7 @@ type IPToDomain struct {
 
 // Meta describes the transform.
 func (IPToDomain) Meta() transform.Meta {
-	return transform.Meta{Name: "ip_to_domain", Category: "Ip", Input: "ip", Output: "domain",
+	return transform.Meta{Name: "ip_to_domain", Category: "IP", Input: "ip", Output: "domain",
 		Description: "Find domains for an IP address by reverse DNS, or else by certificate transparency."}
 }
 
@@ -95,7 +95,7 @@ type IPToInfos struct {
 
 // Meta describes the transform.
 func (IPToInfos) Meta() transform.Meta {
-	return transform.Meta{Name: "ip_to_infos", Category: "Ip", Input: "ip", Output: "ip",
+	return transform.Meta{Name: "ip_to_infos", Category: "IP", Input: "ip", Output: "ip",
 		Description: "Geolocate an IP address and name its ISP (ip-api.com)."}
 }
 
@@ -147,7 +147,7 @@ type IPToASN struct{ ripestat.Client }
 
 // Meta describes the transform.
 func (IPToASN) Meta() transform.Meta {
-	return transform.Meta{Name: "ip_to_asn", Category: "Ip", Input: "ip", Output: "asn",
+	return transform.Meta{Name: "ip_to_asn", Category: "IP", Input: "ip", Output: "asn",
 		Description: "Find the autonomous system announcing an IP address (RIPEstat)."}
 }
 
@@ -242,7 +242,7 @@ type IPToPorts struct {
 
 // Meta describes the transform.
 func (IPToPorts) Meta() transform.Meta {
-	return transform.Meta{Name: "ip_to_ports", Category: "Ip", Input: "ip", Output: "port",
+	return transform.Meta{Name: "ip_to_ports", Category: "IP", Input: "ip", Output: "port",
 		Description: "List open TCP ports of an IP address, from Shodan InternetDB without contacting the target, or by scanning it with nmap on the server.",
 		Params: []transform.Param{
 			{Name: "source", Type: transform.ParamSelect, Default: "passive", Description: "Where the ports come from",
@@ -303,7 +303,7 @@ type IPToFraudScore struct {
 
 // Meta describes the transform.
 func (IPToFraudScore) Meta() transform.Meta {
-	return transform.Meta{Name: "ip_to_fraudscore", Category: "Ip", Input: "ip", Output: "riskprofile",
+	return transform.Meta{Name: "ip_to_fraudscore", Category: "IP", Input: "ip", Output: "riskprofile",
 		Description: "Score how likely an IP address is used for fraud, and flag proxies and VPNs (Scamalytics).",
 		Params: []transform.Param{
 			{Name: "SCAMLYTICS_USERNAME", Type: transform.ParamSecret, Required: true, Description: "The Scamalytics username."},
