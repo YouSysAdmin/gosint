@@ -24,3 +24,8 @@ web/node_modules/
 
 # Windows resources made by scripts/desktop-package.sh
 *.syso
+
+# The documentation build
+/docs/public/
+/docs/resources/
+/docs/.hugo_build.lock

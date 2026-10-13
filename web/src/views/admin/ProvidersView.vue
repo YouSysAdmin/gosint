@@ -328,7 +328,10 @@ onMounted(load)
       <p class="text-xs text-muted mb-2 link-hint">
         Off, discovery and token calls to loopback, private and link-local addresses are refused.
       </p>
-      <FormField label="Allowed emails" hint="Comma separated, an exact match admits on its own">
+      <FormField
+        label="Allowed emails"
+        hint="Comma separated. When set, only these addresses get in and the domains and groups are not checked"
+      >
         <input v-model="editing.form.allowed_emails" class="form-input" />
       </FormField>
       <div class="two">

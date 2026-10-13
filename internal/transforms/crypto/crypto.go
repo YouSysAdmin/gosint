@@ -71,7 +71,7 @@ type CryptoWalletToTransactions struct{ Etherscan }
 
 // Meta describes the transform.
 func (CryptoWalletToTransactions) Meta() transform.Meta {
-	return transform.Meta{Name: "cryptowallet_to_transactions", Category: "CryptoWallet", Input: "cryptowallet",
+	return transform.Meta{Name: "cryptowallet_to_transactions", Category: "Crypto wallet", Input: "cryptowallet",
 		Output: "cryptowallettransaction", Params: etherscanParams,
 		Description: "List the first 100 Ethereum transactions of a wallet (Etherscan)."}
 }
@@ -147,7 +147,7 @@ type CryptoWalletToNFTs struct{ Etherscan }
 
 // Meta describes the transform.
 func (CryptoWalletToNFTs) Meta() transform.Meta {
-	return transform.Meta{Name: "cryptowallet_to_nfts", Category: "CryptoWallet", Input: "cryptowallet",
+	return transform.Meta{Name: "cryptowallet_to_nfts", Category: "Crypto wallet", Input: "cryptowallet",
 		Output: "cryptonft", Params: etherscanParams,
 		Description: "List the NFT transfers of a wallet (Etherscan)."}
 }

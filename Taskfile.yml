@@ -64,6 +64,24 @@ tasks:
       - task: web
       - VERSION={{.VERSION}} scripts/desktop-package.sh
 
+  # The documentation site (Hugo, the theme a Hugo module, Go needed).
+  docs:
+    desc: Build the documentation into docs/public
+    dir: docs
+    cmds:
+      - hugo --minify
+
+  docs-dev:
+    desc: Serve the documentation with live reload on http://localhost:1313/gosint/
+    dir: docs
+    cmds:
+      - hugo server
+
+  docs-gen:
+    desc: Write the entity type and transform reference pages from the code
+    cmds:
+      - go run ./internal/tools/docgen -out docs/content/reference
+
   dev-up:
     desc: Start the dev postgres on :5434 and wait until it answers
     cmds:

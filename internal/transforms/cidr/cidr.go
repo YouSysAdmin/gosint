@@ -22,7 +22,7 @@ type CIDRToIPs struct{}
 
 // Meta describes the transform.
 func (CIDRToIPs) Meta() transform.Meta {
-	return transform.Meta{Name: "cidr_to_ips", Category: "Cidr", Input: "cidr", Output: "ip",
+	return transform.Meta{Name: "cidr_to_ips", Category: "CIDR", Input: "cidr", Output: "ip",
 		Description: "List the addresses of an IP range, up to a limit.",
 		Params: []transform.Param{{Name: "limit", Type: transform.ParamNumber, Default: "256",
 			Description: "Most addresses to add per range, at most " + strconv.Itoa(maxHosts)}}}
