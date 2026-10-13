@@ -52,6 +52,35 @@ It adds `gosint` to the applications menu. The `.tar.gz` holds the binary, a
 `libwebkit2gtk-4.1` and GTK 3 installed yourself. The file dialogs use
 `zenity` and links open through `xdg-open`, so have both installed.
 
+
+{{< callout type="warning" title="GDK error" >}}
+If you get follow error (Wayland GDM, etc.)
+
+```
+Overriding existing handler for signal 10. Set JSC_SIGNAL_FOR_GC if you want WebKit to use a different signal
+Gdk-Message: 17:43:29.125: Error 71 (Protocol error) dispatching to Wayland display.
+```
+
+you can try runs gosint as
+
+```shell
+WEBKIT_DISABLE_DMABUF_RENDERER=1  ./gosint-desktop
+```
+
+```
+[Desktop Entry]
+Type=Application
+Name=gosint
+Comment=OSINT graph exploration
+Exec=bash -c "export WEBKIT_DISABLE_DMABUF_RENDERER=1; ~/.local/bin/gosint-desktop"
+Icon=/home/USER/.local/share/gosint-desktop/gosint
+Terminal=false
+Categories=Network;Security;
+StartupWMClass=gosint-desktop
+```
+
+{{< /callout >}}
+
 ### Windows
 
 Unzip the archive anywhere and run `gosint-desktop.exe`. The window needs the
