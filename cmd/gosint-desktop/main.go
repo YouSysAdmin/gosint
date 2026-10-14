@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -22,7 +23,10 @@ func main() {
 	// Sets the UTC time zone and ignores the machine's settings.
 	time.Local = time.UTC
 
+	// Most errors were shown in a dialog already, a build without cgo
+	// has no window to show one in.
 	if err := desktop.Run(context.Background()); err != nil {
+		fmt.Fprintln(os.Stderr, "gosint-desktop:", err)
 		os.Exit(1)
 	}
 }
