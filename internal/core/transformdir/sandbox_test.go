@@ -43,12 +43,13 @@ try extra 'cat %q'
 try parent 'cat /proc/$PPID/environ'
 try scratch 'echo x > "$TMPDIR/scratch"'
 try own 'echo x > ./own.txt'
+try run 'cp /bin/sh "$TMPDIR/sh" && "$TMPDIR/sh" -c true'
 `
 
 // A confined script reads the system, its own directory and what the
 // administrator lets through, writes only its scratch directory, and
-// never the server's files or its environment. A path this node lacks
-// is said in the log.
+// never the server's files or its environment, and runs nothing it
+// wrote. A path this node lacks is said in the log.
 func TestAConfinedScriptReachesOnlyWhatItIsGiven(t *testing.T) {
 	if !sandbox.Supported() {
 		t.Skip("no Landlock on this system")
@@ -74,7 +75,7 @@ func TestAConfinedScriptReachesOnlyWhatItIsGiven(t *testing.T) {
 
 	joined := strings.Join(s.log, "\n")
 	for _, want := range []string{"secret refused", "extra allowed", "parent refused", "scratch allowed", "own refused",
-		"/nowhere/gosint-wordlists is not on this node"} {
+		"run refused", "/nowhere/gosint-wordlists is not on this node"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("log lacks %q:\n%s", want, joined)
 		}

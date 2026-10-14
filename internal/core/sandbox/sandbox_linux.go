@@ -22,6 +22,20 @@ func Supported() bool {
 	return err == nil && v >= 1
 }
 
+// A writable place may not run what was put there: a download is data,
+// never a program. Moving a file across directories stays refused, as
+// with the library's own rules.
+const (
+	writeDirs = landlock.AccessFSSet(llsys.AccessFSReadFile | llsys.AccessFSReadDir | llsys.AccessFSWriteFile |
+		llsys.AccessFSRemoveDir | llsys.AccessFSRemoveFile | llsys.AccessFSMakeChar | llsys.AccessFSMakeDir |
+		llsys.AccessFSMakeReg | llsys.AccessFSMakeSock | llsys.AccessFSMakeFifo | llsys.AccessFSMakeBlock |
+		llsys.AccessFSMakeSym | llsys.AccessFSTruncate)
+	writeFiles = landlock.AccessFSSet(llsys.AccessFSReadFile | llsys.AccessFSWriteFile | llsys.AccessFSTruncate)
+)
+
+func rwDirs(paths ...string) landlock.FSRule  { return landlock.PathAccess(writeDirs, paths...) }
+func rwFiles(paths ...string) landlock.FSRule { return landlock.PathAccess(writeFiles, paths...) }
+
 // restrict confines this process and what it starts to p. A path that
 // does not exist is skipped, a file gets file rights, a directory the
 // tree beneath it.
@@ -48,7 +62,7 @@ func restrict(p Policy) error {
 	}
 
 	add(p.Read, landlock.RODirs, landlock.ROFiles)
-	add(p.Write, landlock.RWDirs, landlock.RWFiles)
+	add(p.Write, rwDirs, rwFiles)
 
 	// The newest set the library knows, lowered to what the kernel has.
 	// Supported above already refused a kernel with none.
