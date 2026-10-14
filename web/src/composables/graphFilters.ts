@@ -40,9 +40,10 @@ function read(n: GraphNode, field: string): string {
   return Array.isArray(v) ? v.map(String).join(', ') : String(v)
 }
 
-export function matches(n: GraphNode, r: Rule): boolean {
+// matches tells whether the entity passes the rule. want is the rule's
+// value lowercased, handed in by a caller testing many entities.
+export function matches(n: GraphNode, r: Rule, want = r.value.trim().toLowerCase()): boolean {
   const have = read(n, r.field).toLowerCase()
-  const want = r.value.trim().toLowerCase()
   if (r.op === 'set') return have !== ''
   if (r.op === 'empty') return have === ''
   if (!want) return true
@@ -74,10 +75,12 @@ export function matches(n: GraphNode, r: Rule): boolean {
 
 // hiddenBy lists the entities the rules leave out.
 export function hiddenBy(nodes: GraphNode[], rules: Rule[]): Set<string> {
-  const active = rules.filter((r) => r.value.trim() || !needsValue(r.op))
+  const active = rules
+    .filter((r) => r.value.trim() || !needsValue(r.op))
+    .map((r) => ({ r, want: r.value.trim().toLowerCase() }))
   const out = new Set<string>()
   if (!active.length) return out
-  for (const n of nodes) if (!active.every((r) => matches(n, r))) out.add(n.id)
+  for (const n of nodes) if (!active.every((a) => matches(n, a.r, a.want))) out.add(n.id)
   return out
 }
 

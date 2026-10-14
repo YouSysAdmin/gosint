@@ -13,12 +13,12 @@
 // Beyond clicks the canvas reports right clicks (for the menus), a
 // double click on the background (quick add), an Alt drag from one
 // node to another (a new relationship) and a box selection (hold S).
-import { forceCollide, forceX, forceY } from 'd3-force'
+import { forceCollide, forceX, forceY } from 'd3-force-3d'
 import ForceGraph from 'force-graph'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue'
 import type { GraphEdge, GraphNode } from '@/api/types'
 import { isModalOpen } from '@/components/BaseModal.vue'
-import { iconImage, inkOn } from '@/composables/iconImage'
+import { ICON_INK, iconImage } from '@/composables/iconImage'
 import { treeLayout } from '@/composables/treeLayout'
 import { useCatalogStore } from '@/stores/catalog'
 
@@ -126,8 +126,11 @@ const neighbours = new Set<string>()
 const adjacency = new Map<string, Set<string>>()
 
 // Types hidden through the legend. Hiding keeps the layout, the nodes
-// just stop being drawn.
+// just stop being drawn. The render loop reads the plain Set: a reactive
+// one is asked through a proxy for every node of every frame.
 const hidden = ref(new Set<string>())
+let hiddenRaw = new Set<string>()
+let selectedRaw = toRaw(props.selected)
 const typeOf = new Map<string, string>()
 
 // Alt drag and box selection.
@@ -158,20 +161,25 @@ const pal = {
   chip: '#fff',
   border: '#d4d4d4',
   text: '#0a0a0a',
+  secondary: '#555',
   muted: '#737373',
   accent: '#ea580c',
 }
 
+// Read at mount and when the theme changes, never per frame: each
+// getComputedStyle is a style flush.
 function readPalette() {
   pal.bg = cssVar('--bg-primary', '#fff')
   pal.chip = cssVar('--bg-popover', pal.bg)
   pal.border = cssVar('--border-strong', '#d4d4d4')
   pal.text = cssVar('--text-primary', '#0a0a0a')
+  pal.secondary = cssVar('--text-secondary', '#555')
   pal.muted = cssVar('--text-muted', '#737373')
   pal.accent = cssVar('--graph-accent', '#ea580c')
 }
 
 function setHidden(next: Set<string>) {
+  hiddenRaw = next
   hidden.value = next
   graph?.nodeVisibility(visibleNode).linkVisibility(visibleLink)
 }
@@ -202,7 +210,7 @@ function showAllTypes() {
 }
 
 function visibleNode(n: Node): boolean {
-  return !hidden.value.has(n.type) && !props.hiddenIds?.has(n.id)
+  return !hiddenRaw.has(n.type) && !props.hiddenIds?.has(n.id)
 }
 
 function endId(end: string | Node): string {
@@ -214,7 +222,7 @@ function endType(end: string | Node): string {
 }
 
 function visibleLink(l: Link): boolean {
-  if (hidden.value.has(endType(l.source)) || hidden.value.has(endType(l.target))) return false
+  if (hiddenRaw.has(endType(l.source)) || hiddenRaw.has(endType(l.target))) return false
   return !props.hiddenIds?.has(endId(l.source)) && !props.hiddenIds?.has(endId(l.target))
 }
 
@@ -564,8 +572,8 @@ function draw(node: Node, ctx: CanvasRenderingContext2D, scale: number) {
   const x = node.x ?? 0
   const y = node.y ?? 0
   const picked = node.group
-    ? node.group.members.every((m) => props.selected.has(m))
-    : props.selected.has(node.id)
+    ? node.group.members.every((m) => selectedRaw.has(m))
+    : selectedRaw.has(node.id)
 
   ctx.globalAlpha = dimmed(node.id) ? 0.15 : 1
   if (node.group) {
@@ -598,7 +606,7 @@ function draw(node: Node, ctx: CanvasRenderingContext2D, scale: number) {
     ctx.drawImage(img, x - r, y - r, 2 * r, 2 * r)
     ctx.restore()
   } else if (node.icon && r * scale >= ICON_MIN_PX) {
-    const icon = iconImage(node.icon, inkOn(node.fill), redraw)
+    const icon = iconImage(node.icon, ICON_INK, redraw)
     if (icon) {
       const s = r * 1.1
       ctx.drawImage(icon, x - s / 2, y - s / 2, s, s)
@@ -659,19 +667,29 @@ function shortLabel(s: string): string {
   return s.length > MAX_LABEL ? s.slice(0, MAX_LABEL - 1) + '...' : s
 }
 
-// widths caches measureText by font and text, the costly call of the
-// label pass.
+// widths caches measureText by weight and text, the costly call of the
+// label pass, measured at one size: a width scales with the font size,
+// and a key holding the zoom missed on every frame of a zoom.
 const widths = new Map<string, number>()
+const MEASURE_PX = 10
 
-function textWidth(ctx: CanvasRenderingContext2D, font: string, text: string): number {
-  const k = font + '|' + text
+function textWidth(
+  ctx: CanvasRenderingContext2D,
+  weight: string,
+  size: number,
+  text: string,
+): number {
+  const k = weight + '|' + text
   let w = widths.get(k)
   if (w === undefined) {
     if (widths.size > 5000) widths.clear()
+    const was = ctx.font
+    ctx.font = `${weight}${MEASURE_PX}px ${cssFont}`
     w = ctx.measureText(text).width
+    ctx.font = was
     widths.set(k, w)
   }
-  return w
+  return (w * size) / MEASURE_PX
 }
 
 // CELL is the bucket size of the shape grid a plain name is checked
@@ -709,7 +727,7 @@ function drawLabels(ctx: CanvasRenderingContext2D, scale: number) {
     bucket.push({ id: n.id, x: n.x - r, y: n.y - r, w: 2 * r, h: 2 * r })
     shapes.set(key, bucket)
     const rank =
-      props.selected.has(n.id) || hovered === n.id
+      selectedRaw.has(n.id) || hovered === n.id
         ? 0
         : neighbours.has(n.id)
           ? 1
@@ -739,10 +757,10 @@ function drawLabels(ctx: CanvasRenderingContext2D, scale: number) {
   for (const { n, rank } of items.slice(0, 400)) {
     const chip = rank === 0 || rank === 2
     const size = (chip ? 11 : 10) / scale
-    const font = `${chip && rank === 0 ? '600 ' : ''}${size}px ${cssFont}`
-    ctx.font = font
+    const weight = chip && rank === 0 ? '600 ' : ''
+    ctx.font = `${weight}${size}px ${cssFont}`
     const text = shortLabel(n.label)
-    const tw = textWidth(ctx, font, text)
+    const tw = textWidth(ctx, weight, size, text)
     const padX = chip ? 6 / scale : 2 / scale
     const dot = chip ? 7 / scale : 0
     const w = tw + padX * 2 + dot
@@ -760,7 +778,7 @@ function drawLabels(ctx: CanvasRenderingContext2D, scale: number) {
       ctx.fill()
       ctx.globalAlpha = 1
       ctx.lineWidth = 1 / scale
-      ctx.strokeStyle = rank === 0 && props.selected.has(n.id) ? pal.accent : pal.border
+      ctx.strokeStyle = rank === 0 && selectedRaw.has(n.id) ? pal.accent : pal.border
       ctx.stroke()
       ctx.beginPath()
       ctx.arc(rect.x + padX + 2.5 / scale, rect.y + h / 2, 2.5 / scale, 0, 2 * Math.PI)
@@ -793,9 +811,7 @@ function litLink(l: Link): boolean {
 // a selected path shows its steps.
 function withinSelection(l: Link): boolean {
   return (
-    props.selected.size > 1 &&
-    props.selected.has(endId(l.source)) &&
-    props.selected.has(endId(l.target))
+    selectedRaw.size > 1 && selectedRaw.has(endId(l.source)) && selectedRaw.has(endId(l.target))
   )
 }
 
@@ -891,6 +907,12 @@ let lastGroupClick = { id: '', at: 0 }
 
 onMounted(() => {
   if (!host.value) return
+  readPalette()
+  if (minimap.value) {
+    // Drawn at the device's density, or it is a blur on a retina screen.
+    minimap.value.width = MINI_W * dpr
+    minimap.value.height = MINI_H * dpr
+  }
   graph = new ForceGraph<Node, Link>(host.value)
     .nodeId('id')
     .nodeLabel(tooltip)
@@ -961,9 +983,6 @@ onMounted(() => {
       n.fy = n.y
       // A collection is the view's, its place is not stored.
       if (!n.group) emit('moved', [{ node_id: n.id, x: n.x ?? 0, y: n.y ?? 0 }])
-    })
-    .onRenderFramePre(() => {
-      if (frame % 60 === 0) readPalette()
     })
     .onRenderFramePost(afterFrame)
     .onEngineStop(settled)
@@ -1100,21 +1119,22 @@ function groupOf(id: string): Node | undefined {
 
 // The selection and the lit relationship are drawn by us, so a change
 // asks for a frame.
-watch(() => [props.selected, props.selectedEdge, props.litIds], redraw)
+watch(
+  () => [props.selected, props.selectedEdge, props.litIds],
+  () => {
+    selectedRaw = toRaw(props.selected)
+    redraw()
+  },
+)
 
 // The theme switches without a frame of its own: read the palette
-// again and draw once.
+// again and draw once. The theme store turns an OS change into this
+// same attribute, so nothing else needs watching.
 const theme = new MutationObserver(() => {
   readPalette()
   redraw()
 })
 theme.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-const scheme = window.matchMedia('(prefers-color-scheme: dark)')
-function onScheme() {
-  readPalette()
-  redraw()
-}
-scheme.addEventListener('change', onScheme)
 
 // A type card dragged from the Add panel lands where it is dropped.
 function onDrop(ev: DragEvent) {
@@ -1262,7 +1282,7 @@ function afterFrame(ctx: CanvasRenderingContext2D, scale: number) {
     ctx.save()
     ctx.setLineDash([4 / scale, 3 / scale])
     ctx.lineWidth = 1.5 / scale
-    ctx.strokeStyle = cssVar('--text-primary', '#000')
+    ctx.strokeStyle = pal.text
     ctx.beginPath()
     ctx.moveTo(from.x ?? 0, from.y ?? 0)
     ctx.lineTo(g.x, g.y)
@@ -1276,6 +1296,11 @@ function afterFrame(ctx: CanvasRenderingContext2D, scale: number) {
 // minimapFrame is how the last drawn minimap maps graph coordinates
 // to its pixels, kept so a click on it maps back.
 let minimapFrame: { minX: number; minY: number; k: number; ox: number; oy: number } | null = null
+
+// The minimap's size in CSS pixels, its bitmap is dpr times that.
+const MINI_W = 160
+const MINI_H = 100
+const dpr = window.devicePixelRatio || 1
 
 // A click or a drag on the minimap puts that spot in the middle of
 // the view.
@@ -1306,7 +1331,8 @@ function drawMinimap() {
   const ctx = c.getContext('2d')
   if (!ctx) return
   const nodes = graph.graphData().nodes.filter((n) => n.x !== undefined && visibleNode(n))
-  ctx.clearRect(0, 0, c.width, c.height)
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, MINI_W, MINI_H)
   minimapFrame = null
   if (nodes.length < 2) return
 
@@ -1330,11 +1356,11 @@ function drawMinimap() {
 
   const pad = 8
   const k = Math.min(
-    (c.width - 2 * pad) / (maxX - minX || 1),
-    (c.height - 2 * pad) / (maxY - minY || 1),
+    (MINI_W - 2 * pad) / (maxX - minX || 1),
+    (MINI_H - 2 * pad) / (maxY - minY || 1),
   )
-  const ox = pad + (c.width - 2 * pad - (maxX - minX) * k) / 2
-  const oy = pad + (c.height - 2 * pad - (maxY - minY) * k) / 2
+  const ox = pad + (MINI_W - 2 * pad - (maxX - minX) * k) / 2
+  const oy = pad + (MINI_H - 2 * pad - (maxY - minY) * k) / 2
   const sx = (x: number) => ox + (x - minX) * k
   const sy = (y: number) => oy + (y - minY) * k
   minimapFrame = { minX, minY, k, ox, oy }
@@ -1346,7 +1372,7 @@ function drawMinimap() {
     ctx.fill()
   }
 
-  ctx.strokeStyle = cssVar('--text-secondary', '#555')
+  ctx.strokeStyle = pal.secondary
   ctx.lineWidth = 1
   ctx.strokeRect(sx(tl.x), sy(tl.y), (br.x - tl.x) * k, (br.y - tl.y) * k)
 }
@@ -1479,7 +1505,7 @@ function center(id: string) {
 // nodeIdsVisible lists what the legend has not hidden, for select all.
 function nodeIdsVisible(): string[] {
   return props.nodes
-    .filter((n) => !hidden.value.has(n.type) && !props.hiddenIds?.has(n.id))
+    .filter((n) => !hiddenRaw.has(n.type) && !props.hiddenIds?.has(n.id))
     .map((n) => n.id)
 }
 
@@ -1497,7 +1523,6 @@ defineExpose({
 
 onBeforeUnmount(() => {
   theme.disconnect()
-  scheme.removeEventListener('change', onScheme)
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('blur', dropModes)
@@ -1527,8 +1552,7 @@ onBeforeUnmount(() => {
     <canvas
       ref="minimap"
       class="minimap"
-      width="160"
-      height="100"
+      :style="{ width: MINI_W + 'px', height: MINI_H + 'px' }"
       title="Click or drag to move the view"
       @mousedown.stop="minimapDown"
       @contextmenu.prevent.stop

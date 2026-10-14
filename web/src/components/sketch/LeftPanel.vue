@@ -6,6 +6,7 @@
 import { computed, ref, watch } from 'vue'
 import type { GraphNode } from '@/api/types'
 import EntityIcon from '@/components/sketch/EntityIcon.vue'
+import { useDebounced } from '@/composables/useDebounced'
 import { useCatalogStore } from '@/stores/catalog'
 
 const props = defineProps<{
@@ -58,14 +59,29 @@ watch(types, (now) => {
   if (typeFilter.value && !now.some(([t]) => t === typeFilter.value)) typeFilter.value = ''
 })
 
+// The header's query settles before the list follows it.
+const query = useDebounced(() => props.query, 150)
+
+// Sorted once per graph, the filters only narrow it.
+const sorted = computed(() => [...props.nodes].sort((a, b) => a.label.localeCompare(b.label)))
+
 const shown = computed(() => {
-  const q = props.query.trim().toLowerCase()
-  return props.nodes
-    .filter((n) => !typeFilter.value || n.type === typeFilter.value)
-    .filter((n) => !flagFilter.value || n.flag === flagFilter.value)
-    .filter((n) => !q || n.label.toLowerCase().includes(q) || n.type.includes(q))
-    .sort((a, b) => a.label.localeCompare(b.label))
+  const q = query.value.trim().toLowerCase()
+  const t = typeFilter.value
+  const f = flagFilter.value
+  return sorted.value.filter(
+    (n) =>
+      (!t || n.type === t) &&
+      (!f || n.flag === f) &&
+      (!q || n.label.toLowerCase().includes(q) || n.type.includes(q)),
+  )
 })
+
+// The list draws the first LIST_MAX matches and counts the rest, so a
+// large sketch does not mount a row per entity. Select all still takes
+// every match.
+const LIST_MAX = 300
+const drawn = computed(() => shown.value.slice(0, LIST_MAX))
 
 const allShown = computed(
   () => shown.value.length > 0 && shown.value.every((n) => props.selected.has(n.id)),
@@ -197,7 +213,7 @@ function dragType(ev: DragEvent, type: string) {
 
       <ul class="list">
         <li
-          v-for="n in shown"
+          v-for="n in drawn"
           :key="n.id"
           class="row"
           :class="{ on: selected.has(n.id) }"
@@ -215,6 +231,9 @@ function dragType(ev: DragEvent, type: string) {
           <span class="type-badge" :style="{ '--chip': catalog.color(n.type) }">{{
             typeTitle(n.type)
           }}</span>
+        </li>
+        <li v-if="shown.length > drawn.length" class="text-sm text-muted pad">
+          {{ shown.length - drawn.length }} more, narrow the search.
         </li>
         <li v-if="!shown.length" class="text-sm text-muted pad">
           {{ nodes.length ? 'No entity matches.' : 'No entity yet.' }}

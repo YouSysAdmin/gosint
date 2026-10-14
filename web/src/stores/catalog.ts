@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { listTypes } from '@/api/catalog'
 import type { EntityType, TypeCategory } from '@/api/types'
 
@@ -23,8 +23,11 @@ export const useCatalogStore = defineStore('catalog', () => {
     return loading
   }
 
+  // byName answers type() in one step, it is asked several times per row.
+  const byName = computed(() => new Map(types.value.map((t) => [t.name, t])))
+
   function type(name: string): EntityType | undefined {
-    return types.value.find((t) => t.name === name)
+    return byName.value.get(name)
   }
 
   // A stable colour per type: the catalog's, or one derived from the name.

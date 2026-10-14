@@ -6,6 +6,7 @@ import type { GraphNode } from '@/api/types'
 import EntityIcon from '@/components/sketch/EntityIcon.vue'
 import { downloadCSV } from '@/composables/csv'
 import { formatDate } from '@/composables/formatDate'
+import { useDebounced } from '@/composables/useDebounced'
 import { useCatalogStore } from '@/stores/catalog'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -20,16 +21,29 @@ const emit = defineEmits<{
 const catalog = useCatalogStore()
 const toast = useNotificationStore()
 const search = ref('')
+const query = useDebounced(() => search.value, 150)
 const typeFilter = ref('')
 
 const types = computed(() => [...new Set(props.nodes.map((n) => n.type))].sort())
 
+// Sorted once per graph, the search only filters it.
+const sorted = computed(() =>
+  [...props.nodes].sort((a, b) => a.type.localeCompare(b.type) || a.label.localeCompare(b.label)),
+)
+
+// summaries holds each entity's summary by id, built once per graph.
+const summaries = computed(() => new Map(props.nodes.map((n) => [n.id, summary(n)])))
+
 const shown = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  return props.nodes
-    .filter((n) => !typeFilter.value || n.type === typeFilter.value)
-    .filter((n) => !q || n.label.toLowerCase().includes(q) || summary(n).toLowerCase().includes(q))
-    .sort((a, b) => a.type.localeCompare(b.type) || a.label.localeCompare(b.label))
+  const q = query.value.trim().toLowerCase()
+  const t = typeFilter.value
+  return sorted.value.filter(
+    (n) =>
+      (!t || n.type === t) &&
+      (!q ||
+        n.label.toLowerCase().includes(q) ||
+        (summaries.value.get(n.id) ?? '').toLowerCase().includes(q)),
+  )
 })
 
 const allShown = computed(
@@ -136,7 +150,7 @@ async function copy(n: GraphNode) {
               >
             </td>
             <td class="cell-title">{{ n.label }}</td>
-            <td class="text-muted text-sm props">{{ summary(n) }}</td>
+            <td class="text-muted text-sm props">{{ summaries.get(n.id) }}</td>
             <td class="cell-nowrap text-muted text-sm">{{ formatDate(n.created_at) }}</td>
             <td class="cell-nowrap" @click.stop>
               <button class="btn btn-sm btn-secondary" title="Copy the label" @click="copy(n)">

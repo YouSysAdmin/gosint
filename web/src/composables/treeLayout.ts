@@ -73,8 +73,8 @@ export function treeLayout(nodes: TreeNode[], edges: TreeEdge[]): Map<string, Sp
     roots.push(r.id)
     seen.add(r.id)
     const queue = [r.id]
-    while (queue.length) {
-      const u = queue.shift()!
+    for (let h = 0; h < queue.length; h++) {
+      const u = queue[h]
       const list: string[] = []
       // Along the arrows first, then against them, transforms draw both ways.
       for (const v of [...out.get(u)!, ...inc.get(u)!]) {
@@ -96,7 +96,7 @@ export function treeLayout(nodes: TreeNode[], edges: TreeEdge[]): Map<string, Sp
     while (stack.length) {
       const u = stack.pop()!
       post.push(u)
-      stack.push(...(kids.get(u) ?? []))
+      for (const c of kids.get(u) ?? []) stack.push(c)
     }
   }
   for (const u of post.reverse()) {

@@ -74,7 +74,6 @@ import GraphCanvas, { type Point } from '@/components/GraphCanvas.vue'
 import { isModalOpen } from '@/components/BaseModal.vue'
 import LoadingBlock from '@/components/LoadingBlock.vue'
 import MenuButton from '@/components/MenuButton.vue'
-import ChatPanel from '@/components/sketch/ChatPanel.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import AddNodeDialog from '@/components/sketch/AddNodeDialog.vue'
 import DeleteNodesDialog from '@/components/sketch/DeleteNodesDialog.vue'
@@ -83,13 +82,11 @@ import EdgesTable from '@/components/sketch/EdgesTable.vue'
 import FilterPopover from '@/components/sketch/FilterPopover.vue'
 import LeftPanel from '@/components/sketch/LeftPanel.vue'
 import NodesTable from '@/components/sketch/NodesTable.vue'
-import NotesPanel from '@/components/sketch/NotesPanel.vue'
 import GraphMenu, { type MenuKind } from '@/components/sketch/GraphMenu.vue'
 import QuickAdd from '@/components/sketch/QuickAdd.vue'
 import ShortcutsDialog from '@/components/sketch/ShortcutsDialog.vue'
 import SketchSettingsDialog from '@/components/sketch/SketchSettingsDialog.vue'
 import LinkDialog from '@/components/sketch/LinkDialog.vue'
-import ImportDialog from '@/components/sketch/ImportDialog.vue'
 import ExportDialog from '@/components/ExportDialog.vue'
 import { blobOfDataURL, saveBlob, saveJSON } from '@/composables/download'
 import NodePanel from '@/components/sketch/NodePanel.vue'
@@ -240,8 +237,12 @@ const lastLog = computed(() => logs.value[logs.value.length - 1] ?? null)
 const search = ref('')
 const canvas = ref<InstanceType<typeof GraphCanvas> | null>(null)
 // The map and MapLibre with it load the first time the Map view opens,
-// most sketches never show it.
+// most sketches never show it. The notes (the TipTap editor), the chat
+// and the import dialog the same, each the first time it is asked for.
 const MapCanvas = defineAsyncComponent(() => import('@/components/MapCanvas.vue'))
+const NotesPanel = defineAsyncComponent(() => import('@/components/sketch/NotesPanel.vue'))
+const ChatPanel = defineAsyncComponent(() => import('@/components/sketch/ChatPanel.vue'))
+const ImportDialog = defineAsyncComponent(() => import('@/components/sketch/ImportDialog.vue'))
 type MapView = InstanceType<typeof import('@/components/MapCanvas.vue').default>
 const mapView = ref<MapView | null>(null)
 const view = ref<'graph' | 'table' | 'relationships' | 'map'>('graph')
@@ -267,6 +268,8 @@ function groupMenu(ids: string[], at: Point) {
 const showFilters = ref(false)
 const rules = ref<Rule[]>([])
 const hiddenIds = computed(() => hiddenBy(nodes.value, rules.value))
+const shownNodes = computed(() => nodes.value.filter((n) => !hiddenIds.value.has(n.id)))
+const ruleFields = computed(() => filterFields(nodes.value))
 
 // The filter rules are kept per sketch in this browser, a reload must
 // not undo a triage view.
@@ -308,12 +311,16 @@ function selectFoundBy(s: Scan) {
   canvas.value?.zoomToSelection(new Set(ids))
 }
 const logLevels = computed(() => [...new Set(logs.value.map((l) => l.level))].sort())
-const shownLogs = computed(() =>
+// The newest lines first, at most LOG_SHOWN drawn: a thousand rows of
+// text in the DOM made every new line cost a layout of them all.
+const LOG_SHOWN = 400
+const matchingLogs = computed(() =>
   [...logs.value]
     .reverse()
     .filter((l) => !logLevel.value || l.level === logLevel.value)
     .filter((l) => !logScan.value || l.scan_id === logScan.value),
 )
+const shownLogs = computed(() => matchingLogs.value.slice(0, LOG_SHOWN))
 const scanName = (scanId: string) => scans.value.find((s) => s.id === scanId)?.name ?? 'scan'
 
 function toScan(l: LogEntry) {
@@ -361,7 +368,10 @@ const isOwner = computed(() => role.value === 'owner')
 const picked = computed(() => nodes.value.filter((n) => selected.value.has(n.id)))
 const one = computed(() => (picked.value.length === 1 ? picked.value[0] : null))
 const edgeSelected = computed(() => edges.value.find((e) => e.id === selectedEdge.value) ?? null)
-const menuNodes = computed(() => nodes.value.filter((n) => menu.value?.ids.includes(n.id)))
+const menuNodes = computed(() => {
+  const ids = new Set(menu.value?.ids ?? [])
+  return ids.size ? nodes.value.filter((n) => ids.has(n.id)) : []
+})
 const menuEdge = computed(() => edges.value.find((e) => e.id === menu.value?.edgeId))
 const sameType = computed(
   () => picked.value.length > 0 && picked.value.every((n) => n.type === picked.value[0].type),
@@ -1167,13 +1177,13 @@ onBeforeUnmount(() => {
         <FilterPopover
           v-if="showFilters"
           v-model="rules"
-          :fields="filterFields(nodes)"
+          :fields="ruleFields"
           :hidden="hiddenIds.size"
           @close="showFilters = false"
         />
         <NodesTable
           v-if="view === 'table'"
-          :nodes="nodes.filter((n) => !hiddenIds.has(n.id))"
+          :nodes="shownNodes"
           :selected="selected"
           @focus="focusFromList"
           @toggle="toggle"
@@ -1493,6 +1503,9 @@ onBeforeUnmount(() => {
         </div>
         <p v-if="!logs.length" class="text-muted">Nothing has run on this sketch yet.</p>
         <p v-else-if="!shownLogs.length" class="text-muted">No line matches.</p>
+        <p v-else-if="matchingLogs.length > LOG_SHOWN" class="text-muted">
+          The newest {{ LOG_SHOWN }} of {{ matchingLogs.length }} lines, narrow by level or scan.
+        </p>
       </div>
       <div v-else-if="drawer === 'schedules'" class="log">
         <p v-if="!schedules.length && !newSchedule" class="text-muted">

@@ -31,12 +31,13 @@ const done = computed(() => applied.get(key.value) ?? new Set<number>())
 const busy = ref(false)
 
 const pending = computed(() => props.changes.map((_, i) => i).filter((i) => !done.value.has(i)))
+const byId = computed(() => new Map(props.nodes.map((n) => [n.id, n])))
 
 // nameOf shows an entity reference: the label of the id, or the text
 // itself when the model wrote a label instead of an id.
 function nameOf(ref: string): string {
   const clean = ref.trim().replace(/[,;.\s]+$/, '')
-  return props.nodes.find((n) => n.id === clean)?.label ?? clean
+  return byId.value.get(clean)?.label ?? clean
 }
 
 function title(c: ProposedChange): string {
@@ -68,7 +69,7 @@ function relation(s?: string): string {
 }
 
 function current(c: ProposedChange, key: string): string {
-  const n = props.nodes.find((x) => x.id === c.node_id)
+  const n = byId.value.get(c.node_id ?? '')
   const v = n?.properties[key]
   return v === undefined || v === null || v === '' ? '' : String(v)
 }

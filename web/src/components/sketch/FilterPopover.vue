@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Rules hiding entities from the graph: a property, a comparison and a
 // value, every rule having to match.
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { needsValue, OPERATORS, type Rule } from '@/composables/graphFilters'
 
 defineProps<{ fields: string[]; hidden: number }>()
@@ -9,12 +9,46 @@ const rules = defineModel<Rule[]>({ required: true })
 const emit = defineEmits<{ (e: 'close'): void }>()
 const el = ref<HTMLElement | null>(null)
 
+// A value being typed is a draft by rule index, committed into the
+// rule 200ms after typing stops: every commit filters the whole graph.
+const drafts = reactive(new Map<number, string>())
+const timers = new Map<number, number>()
+
+function typed(i: number, v: string) {
+  drafts.set(i, v)
+  window.clearTimeout(timers.get(i))
+  timers.set(
+    i,
+    window.setTimeout(() => commit(i), 200),
+  )
+}
+
+function commit(i: number) {
+  window.clearTimeout(timers.get(i))
+  timers.delete(i)
+  const v = drafts.get(i)
+  drafts.delete(i)
+  if (v !== undefined && rules.value[i]) rules.value[i].value = v
+}
+
+// flush commits every draft before the rules are renumbered.
+function flush() {
+  for (const i of [...drafts.keys()]) commit(i)
+}
+
 function add() {
+  flush()
   rules.value = [...rules.value, { field: 'label', op: 'contains', value: '' }]
 }
 
 function remove(i: number) {
+  flush()
   rules.value = rules.value.filter((_, j) => j !== i)
+}
+
+function clear() {
+  flush()
+  rules.value = []
 }
 
 // The buttons that open the popover are not "outside": closing on
@@ -34,6 +68,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.clearTimeout(armed)
   document.removeEventListener('mousedown', away, true)
+  flush()
 })
 </script>
 
@@ -55,18 +90,18 @@ onBeforeUnmount(() => {
       </select>
       <input
         v-if="needsValue(r.op)"
-        v-model="r.value"
+        :value="drafts.get(i) ?? r.value"
         class="form-input"
         :placeholder="r.field === 'flag' ? 'red, orange, yellow, green, blue' : 'value'"
+        @input="typed(i, ($event.target as HTMLInputElement).value)"
+        @blur="commit(i)"
       />
       <span v-else class="form-input placeholder-cell"></span>
       <button class="x" title="Remove the rule" @click="remove(i)">&times;</button>
     </div>
     <div class="flex gap-2 mt-2">
       <button class="btn btn-sm btn-secondary" @click="add">Add a rule</button>
-      <button v-if="rules.length" class="btn btn-sm btn-secondary" @click="rules = []">
-        Clear
-      </button>
+      <button v-if="rules.length" class="btn btn-sm btn-secondary" @click="clear">Clear</button>
     </div>
   </div>
 </template>

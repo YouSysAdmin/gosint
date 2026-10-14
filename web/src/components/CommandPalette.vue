@@ -17,7 +17,28 @@ interface Item {
   title: string
   hint: string
   to: string
+  // The lowercased title and hint and their words, made once per item
+  // so a keystroke scores without splitting the list again.
+  lower: string
+  words: string[]
+  hintLower: string
+  hintWords: string[]
 }
+
+type ItemFields = Pick<Item, 'id' | 'group' | 'title' | 'hint' | 'to'>
+
+function item(f: ItemFields): Item {
+  const lower = f.title.toLowerCase()
+  const hintLower = f.hint.toLowerCase()
+
+  return { ...f, lower, words: lower.split(/\s+/), hintLower, hintWords: hintLower.split(/\s+/) }
+}
+
+// The investigations and sketches are kept across openings and asked
+// again only once a minute old, the kept lists shown meanwhile.
+const LISTS_TTL = 60_000
+let lists: { investigations: Investigation[]; sketches: Sketch[]; at: number } | null = null
+let listing: Promise<void> | null = null
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -72,7 +93,7 @@ const allPages: Item[] = [
     hint: 'your name and avatar',
     to: '/profile',
   },
-]
+].map(item)
 
 // The administration page is offered to administrators only, the
 // router sends anyone else back without a word.
@@ -81,36 +102,41 @@ const pages = computed(() => allPages.filter((p) => !p.to.startsWith('/admin') |
 const items = computed<Item[]>(() => {
   const invName = new Map(investigations.value.map((i) => [i.id, i.name]))
   return [
-    ...investigations.value.map((i) => ({
-      id: 'i-' + i.id,
-      group: 'Investigations',
-      title: i.name,
-      hint: i.status === 'archived' ? 'archived' : '',
-      to: `/investigations/${i.id}`,
-    })),
-    ...sketches.value.map((s) => ({
-      id: 's-' + s.id,
-      group: 'Sketches',
-      title: s.title,
-      hint: invName.get(s.investigation_id) ?? '',
-      to: `/sketches/${s.id}`,
-    })),
+    ...investigations.value.map((i) =>
+      item({
+        id: 'i-' + i.id,
+        group: 'Investigations',
+        title: i.name,
+        hint: i.status === 'archived' ? 'archived' : '',
+        to: `/investigations/${i.id}`,
+      }),
+    ),
+    ...sketches.value.map((s) =>
+      item({
+        id: 's-' + s.id,
+        group: 'Sketches',
+        title: s.title,
+        hint: invName.get(s.investigation_id) ?? '',
+        to: `/sketches/${s.id}`,
+      }),
+    ),
     ...pages.value,
-    ...hits.value.map((h) => ({
-      id: 'e-' + h.id,
-      group: 'Entities',
-      title: h.label,
-      hint: `${h.type} in ${h.sketch_title}, ${h.investigation_name}`,
-      to: `/sketches/${h.sketch_id}?focus=${h.id}`,
-    })),
+    ...hits.value.map((h) =>
+      item({
+        id: 'e-' + h.id,
+        group: 'Entities',
+        title: h.label,
+        hint: `${h.type} in ${h.sketch_title}, ${h.investigation_name}`,
+        to: `/sketches/${h.sketch_id}?focus=${h.id}`,
+      }),
+    ),
   ]
 })
 
 // score ranks a match: a prefix first, then a word start, then anywhere.
-function score(text: string, q: string): number {
-  const t = text.toLowerCase()
+function score(t: string, words: string[], q: string): number {
   if (t.startsWith(q)) return 3
-  if (t.split(/\s+/).some((w) => w.startsWith(q))) return 2
+  if (words.some((w) => w.startsWith(q))) return 2
   if (t.includes(q)) return 1
   return 0
 }
@@ -119,7 +145,10 @@ const shown = computed(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) return items.value.slice(0, 12)
   return items.value
-    .map((it) => ({ it, s: Math.max(score(it.title, q), score(it.hint, q) - 1) }))
+    .map((it) => ({
+      it,
+      s: Math.max(score(it.lower, it.words, q), score(it.hintLower, it.hintWords, q) - 1),
+    }))
     .filter((x) => x.s > 0 || x.it.group === 'Entities')
     .sort((a, b) => b.s - a.s || a.it.title.localeCompare(b.it.title))
     .slice(0, 20)
@@ -128,19 +157,35 @@ const shown = computed(() => {
 
 watch(shown, () => (cursor.value = 0))
 
+// loadLists asks the server for both lists, one request pair at a time.
+function loadLists(): Promise<void> {
+  if (listing) return listing
+  listing = (async () => {
+    try {
+      const [inv, sk] = await Promise.all([listInvestigations(), listSketches()])
+      lists = { investigations: inv, sketches: sk, at: Date.now() }
+      investigations.value = inv
+      sketches.value = sk
+    } catch {
+      // the pages still work
+    } finally {
+      listing = null
+    }
+  })()
+
+  return listing
+}
+
 async function show() {
   open.value = true
   query.value = ''
   await nextTick()
   input.value?.focus()
-  try {
-    ;[investigations.value, sketches.value] = await Promise.all([
-      listInvestigations(),
-      listSketches(),
-    ])
-  } catch {
-    // the pages still work
+  if (lists) {
+    investigations.value = lists.investigations
+    sketches.value = lists.sketches
   }
+  if (!lists || Date.now() - lists.at > LISTS_TTL) void loadLists()
 }
 
 function go(it: Item) {

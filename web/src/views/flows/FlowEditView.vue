@@ -14,6 +14,7 @@ import {
   type EdgeChange,
   type Node,
   type NodeChange,
+  type NodeDragEvent,
 } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
@@ -63,12 +64,13 @@ const { screenToFlowCoordinate } = useVueFlow()
 
 const builtins = computed(() => transforms.value.filter((e) => !e.template_id))
 const byName = computed(() => new Map(builtins.value.map((e) => [e.name, e])))
-const current = computed(() => steps.value.find((s) => s.id === selected.value) ?? null)
+const byId = computed(() => new Map(steps.value.map((s) => [s.id, s])))
+const current = computed(() => byId.value.get(selected.value) ?? null)
 
 // outputOf is the type a step produces, the input type for the root.
 function outputOf(stepId: string): string {
   if (stepId === ROOT) return input.value
-  const s = steps.value.find((x) => x.id === stepId)
+  const s = byId.value.get(stepId)
 
   return (s && byName.value.get(s.transform)?.output) ?? ''
 }
@@ -164,12 +166,12 @@ function editableParams(step: FlowStep) {
 // isBelow tells whether node is in the subtree of root, which a new
 // wire from node into root would turn into a cycle.
 function isBelow(node: string, root: string): boolean {
-  let at = steps.value.find((s) => s.id === node)
+  let at = byId.value.get(node)
   const seen = new Set<string>()
   while (at && !seen.has(at.id)) {
     if (at.after === root) return true
     seen.add(at.id)
-    at = steps.value.find((s) => s.id === at!.after)
+    at = byId.value.get(at.after)
   }
 
   return false
@@ -277,11 +279,20 @@ function onConnect(c: Connection) {
   selected.value = child.id
 }
 
+// A position change during a drag is left to the canvas, which moves
+// the node itself, and the spot is recorded once the drag ends: writing
+// it on every frame rebuilt every node and wire. A keyboard nudge comes
+// as a change that is not dragging.
 function onNodesChange(changes: NodeChange[]) {
   for (const ch of changes) {
-    if (ch.type === 'position' && ch.position) positions.value[ch.id] = { ...ch.position }
-    else if (ch.type === 'remove' && ch.id !== ROOT) removeStep(ch.id)
+    if (ch.type === 'position') {
+      if (!ch.dragging && ch.position) positions.value[ch.id] = { ...ch.position }
+    } else if (ch.type === 'remove' && ch.id !== ROOT) removeStep(ch.id)
   }
+}
+
+function onDragStop({ nodes: moved }: NodeDragEvent) {
+  for (const n of moved) positions.value[n.id] = { x: n.position.x, y: n.position.y }
 }
 
 // A removed wire leaves the step unconnected until it is wired again.
@@ -448,6 +459,7 @@ onMounted(async () => {
           fit-view-on-init
           @connect="onConnect"
           @nodes-change="onNodesChange"
+          @node-drag-stop="onDragStop"
           @edges-change="onEdgesChange"
           @node-click="({ node }) => pick(node.id)"
           @edge-click="({ edge }) => pickEdge(edge.id)"

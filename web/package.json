@@ -30,7 +30,6 @@
     "@vue-flow/core": "^1.48.2",
     "axios": "^1.13.6",
     "codemirror": "^6.0.2",
-    "d3-force": "^3.0.0",
     "force-graph": "^1.52.0",
     "lucide-vue-next": "^1.0.0",
     "maplibre-gl": "^6.12.0",

@@ -14,7 +14,7 @@ import {
 } from '@/api/chat'
 import { apiErrorMessage } from '@/api/client'
 import ProposalCards from '@/components/sketch/ProposalCards.vue'
-import type { ProposedChange, Chat, ChatMessage, GraphNode } from '@/api/types'
+import type { Chat, ChatMessage, GraphNode } from '@/api/types'
 import { useLlmModels } from '@/composables/llmModels'
 import { useConfirm } from '@/composables/useConfirm'
 import { useNotificationStore } from '@/stores/notification'
@@ -127,6 +127,19 @@ async function scroll() {
   if (log.value) log.value.scrollTop = log.value.scrollHeight
 }
 
+// stick follows a streaming answer one frame at a time, and only while
+// the reader is near the end, so a scroll up to read is not undone.
+let frame = 0
+function stick() {
+  if (frame) return
+  const el = log.value
+  const near = !el || el.scrollHeight - el.scrollTop - el.clientHeight < 40
+  frame = requestAnimationFrame(() => {
+    frame = 0
+    if (near && log.value) log.value.scrollTop = log.value.scrollHeight
+  })
+}
+
 function fresh() {
   current.value = ''
   messages.value = []
@@ -193,7 +206,7 @@ async function send() {
         token: (t) => {
           partial.value += t
           sign()
-          void scroll()
+          stick()
         },
         thinking: (t) => {
           thinking.value += t
@@ -266,18 +279,20 @@ function onKey(ev: KeyboardEvent) {
   }
 }
 
+// turns is each message with its proposal block split out once: the
+// text draws as is and the changes as cards.
+const turns = computed(() =>
+  messages.value.map((m) => {
+    const { text, changes } = splitProposal(m.content)
+    return { m, text, changes }
+  }),
+)
+
+// The answer under way, its block held back while it streams.
+const partialText = computed(() => splitProposal(partial.value).text)
+
 // render keeps the text as written, with `code` spans marked, which is
 // how the model is asked to name an entity.
-// shown is a message's text without its proposal block, which draws as
-// cards instead.
-function shown(content: string): string {
-  return splitProposal(content).text
-}
-
-function proposals(content: string): ProposedChange[] {
-  return splitProposal(content).changes
-}
-
 function render(text: string): string {
   const safe = text.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] ?? c)
   return safe.replace(/`([^`\n]+)`/g, '<code>$1</code>')
@@ -301,7 +316,10 @@ onMounted(async () => {
   }
 })
 
-onBeforeUnmount(stop)
+onBeforeUnmount(() => {
+  stop()
+  cancelAnimationFrame(frame)
+})
 </script>
 
 <template>
@@ -354,18 +372,18 @@ onBeforeUnmount(stop)
           No language model is set up yet, an administrator adds one under Administration, Models.
         </template>
       </p>
-      <div v-for="m in messages" :key="m.id" class="msg" :class="m.role">
+      <div v-for="{ m, text, changes } in turns" :key="m.id" class="msg" :class="m.role">
         <div class="who text-xs text-muted">
           {{ m.role === 'user' ? 'You' : 'Assistant' }}
           <span v-if="m.context?.length"> , {{ m.context.length }} entities as context</span>
         </div>
-        <div v-if="shown(m.content)" class="text" v-html="render(shown(m.content))"></div>
+        <div v-if="text" class="text" v-html="render(text)"></div>
         <ProposalCards
-          v-if="m.role === 'assistant' && proposals(m.content).length"
+          v-if="m.role === 'assistant' && changes.length"
           :sketch-id="sketchId"
           :chat-id="m.chat_id"
           :message-id="m.id"
-          :changes="proposals(m.content)"
+          :changes="changes"
           :nodes="nodes"
           :can-edit="canEdit"
           @applied="emit('applied')"
@@ -383,7 +401,7 @@ onBeforeUnmount(stop)
           <summary class="text-xs text-muted">Show the reasoning</summary>
           <pre class="text-xs text-muted">{{ thinking.slice(-2000) }}</pre>
         </details>
-        <div v-if="partial" class="text" v-html="render(shown(partial))"></div>
+        <div v-if="partial" class="text" v-html="render(partialText)"></div>
       </div>
       <p v-if="problem" class="notice notice-danger text-sm">
         {{ problem }}

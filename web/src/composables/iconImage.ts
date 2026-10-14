@@ -1,5 +1,8 @@
 // Entity type icons as images a canvas can draw: the Lucide icon's
 // shapes written out as an SVG data URL, loaded once per icon and colour.
+// The ink is white on every fill: no type colour of the palette is light
+// enough to lose it, and a dark ink picked by luminance made the icons
+// on the yellow and the pale types read as black at a glance.
 import { Circle } from 'lucide-vue-next'
 import type { VNode } from 'vue'
 import { iconFor } from '@/composables/entityIcons'
@@ -58,25 +61,5 @@ export function iconImage(
   return null
 }
 
-const inks = new Map<string, string>()
-let probe: CanvasRenderingContext2D | null = null
-
-// inkOn is the icon colour that reads on a fill: white on a dark one,
-// near black on a light one.
-export function inkOn(fill: string): string {
-  const known = inks.get(fill)
-  if (known) return known
-  probe ??= document.createElement('canvas').getContext('2d')
-  let ink = '#ffffff'
-  if (probe) {
-    probe.clearRect(0, 0, 1, 1)
-    probe.fillStyle = fill
-    probe.fillRect(0, 0, 1, 1)
-    const [r, g, b] = probe.getImageData(0, 0, 1, 1).data
-    const lum = (0.2126 * r! + 0.7152 * g! + 0.0722 * b!) / 255
-    if (lum > 0.65) ink = '#1f2328'
-  }
-  inks.set(fill, ink)
-
-  return ink
-}
+// ICON_INK is the colour every icon is drawn in.
+export const ICON_INK = '#ffffff'

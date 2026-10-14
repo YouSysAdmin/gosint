@@ -4,7 +4,6 @@
 // code proving the app holds it turns it on, so an abandoned setup
 // leaves the account as it was.
 import { computed, onMounted, ref, watch } from 'vue'
-import QRCode from 'qrcode'
 import {
   recoveryCodesRegenerate,
   recoveryCodesStatus,
@@ -54,7 +53,9 @@ async function start() {
   try {
     const res = await totpSetup(setupPassword.value)
     setupPassword.value = ''
-    // Drawn in the browser: the otpauth URL carries the secret.
+    // Drawn in the browser: the otpauth URL carries the secret. The
+    // library is loaded here only, an enrolment is rare.
+    const { default: QRCode } = await import('qrcode')
     pending.value = {
       secret: res.secret,
       qr: await QRCode.toDataURL(res.otpauth_url, { width: 220, margin: 1 }),

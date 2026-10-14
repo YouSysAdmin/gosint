@@ -26,8 +26,8 @@ export function componentOf(ids: Set<string>, edges: GraphEdge[]): string[] {
   const adj = adjacency(edges)
   const seen = new Set(ids)
   const queue = [...ids]
-  while (queue.length) {
-    const id = queue.shift()!
+  for (let h = 0; h < queue.length; h++) {
+    const id = queue[h]
     for (const next of adj.get(id) ?? []) {
       if (!seen.has(next)) {
         seen.add(next)
@@ -45,8 +45,8 @@ export function shortestPath(a: string, b: string, edges: GraphEdge[]): string[]
   const adj = adjacency(edges)
   const prev = new Map<string, string>([[a, '']])
   const queue = [a]
-  while (queue.length) {
-    const id = queue.shift()!
+  for (let h = 0; h < queue.length; h++) {
+    const id = queue[h]
     for (const next of adj.get(id) ?? []) {
       if (prev.has(next)) continue
       prev.set(next, id)
