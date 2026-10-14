@@ -218,7 +218,12 @@ func tableInput(t *tabular.Table, m tableMapping) (importInput, error) {
 
 			id := fmt.Sprintf("r%de%d", ri+1, ei+1)
 			ids[ei] = id
-			in.Nodes = append(in.Nodes, importNode{ID: id, Type: e.Type, Properties: props})
+			in.Nodes = append(in.Nodes, importNode{
+				ID:         id,
+				Type:       e.Type,
+				Label:      primaryValue(typ, props),
+				Properties: props,
+			})
 		}
 
 		for _, l := range m.Links {
@@ -262,6 +267,20 @@ func cellValue(f *types.Field, v string) any {
 
 // primaryFilled says whether the row gave the entity its main field,
 // or any value when the type has none.
+// primaryValue is the primary field's value as text, what a row's entity
+// is called before its type builds the label: a refusal names it.
+func primaryValue(t *types.Type, props map[string]any) string {
+	for _, f := range t.Fields {
+		if f.Primary {
+			if v, ok := props[f.Name]; ok && v != "" {
+				return fmt.Sprint(v)
+			}
+		}
+	}
+
+	return ""
+}
+
 func primaryFilled(t *types.Type, props map[string]any) bool {
 	hasPrimary := false
 	for _, f := range t.Fields {

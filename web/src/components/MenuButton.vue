@@ -34,6 +34,14 @@ function toggle(ev: MouseEvent) {
 }
 
 // The slotted buttons are the menu's items, told so for a reader.
+// A pick closes the menu and puts the focus back on the button at once,
+// so a dialog the pick opens records the button as what to give the
+// focus back to, not the item about to vanish with the menu.
+function pick() {
+  open.value = false
+  trigger.value?.focus()
+}
+
 watch(open, async (on) => {
   if (!on) return
   await nextTick()
@@ -65,7 +73,7 @@ onBeforeUnmount(() => {
     >
       {{ label }}
     </button>
-    <div v-if="open" ref="panel" class="menu" role="menu" @click="open = false">
+    <div v-if="open" ref="panel" class="menu" role="menu" @click="pick">
       <slot />
     </div>
   </div>
