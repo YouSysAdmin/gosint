@@ -5,6 +5,7 @@ package server_test
 import (
 	"encoding/json/v2"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -203,6 +204,16 @@ func TestAnAdministratorSetsTheTools(t *testing.T) {
 			t.Errorf("a missing program is found at %s", tl.Found)
 		}
 	}
+
+	// A script is not let at the server's own files, a directory
+	// holding them included.
+	rt.Config.Vault.UnsealKeyFile = filepath.Join(t.TempDir(), "unseal.key")
+	alice.expect(http.StatusBadRequest, "PUT", "/api/admin/settings/tools", map[string]any{"tools": map[string]any{
+		"scripts": map[string]any{"read_paths": []string{filepath.Dir(rt.Config.Vault.UnsealKeyFile)}}}})
+	alice.expect(http.StatusBadRequest, "PUT", "/api/admin/settings/tools", map[string]any{"tools": map[string]any{
+		"scripts": map[string]any{"write_paths": []string{rt.Config.Vault.UnsealKeyFile}}}})
+	alice.expect(http.StatusOK, "PUT", "/api/admin/settings/tools", map[string]any{"tools": map[string]any{
+		"scripts": map[string]any{"read_paths": []string{t.TempDir()}}}})
 }
 
 // The file store is saved only once it answers, the S3 secret never

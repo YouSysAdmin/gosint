@@ -101,6 +101,14 @@ func (h Handler) PutTools(c fiber.Ctx) error {
 			if field != "" {
 				return refuse(c, "tools."+name+"."+field, "abs", "every path a script may reach must be absolute")
 			}
+
+			if own := h.ownFileUnder(e.ReadPaths); own != "" {
+				return refuse(c, "tools."+name+".read_paths", "own", "a script may not reach the server's own file "+own)
+			}
+
+			if own := h.ownFileUnder(e.WritePaths); own != "" {
+				return refuse(c, "tools."+name+".write_paths", "own", "a script may not reach the server's own file "+own)
+			}
 		}
 
 		s[name] = e
@@ -113,6 +121,18 @@ func (h Handler) PutTools(c fiber.Ctx) error {
 	h.Runtime.ToolSettings.Set(s)
 
 	return response.Success(c, h.toolViews(s))
+}
+
+// ownFileUnder names the first of the server's own files the grants
+// reach, on this node.
+func (h Handler) ownFileUnder(grants []string) string {
+	for _, own := range h.Runtime.Config.OwnFiles() {
+		if sandbox.Reaches(grants, own) {
+			return own
+		}
+	}
+
+	return ""
 }
 
 // maxPaths bounds the extra paths a script may be given.

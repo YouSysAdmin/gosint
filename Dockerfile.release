@@ -26,8 +26,9 @@ RUN apk add --no-cache ca-certificates tzdata nmap \
 
 # What alpine does not package goes into a venv that sees the system
 # packages above, first on the PATH, so a script's python3 has both.
-RUN python3 -m venv --system-site-packages /opt/gosint/python \
-    && /opt/gosint/python/bin/pip install --no-cache-dir shodan ipwhois
+# Under /usr/local, which a confined script may read, never /opt.
+RUN python3 -m venv --system-site-packages /usr/local/lib/gosint/python \
+    && /usr/local/lib/gosint/python/bin/pip install --no-cache-dir shodan ipwhois
 
 # $TARGETPLATFORM, not a bare filename. dockers_v2 builds both
 # architectures from ONE build and lays the context out per platform
@@ -47,7 +48,7 @@ WORKDIR /data
 ENV GOSINT_SERVER_ADDR=0.0.0.0:4000 \
     GOSINT_DATABASE_DSN=/data/gosint.db \
     HOME=/data \
-    PATH=/opt/gosint/python/bin:$PATH
+    PATH=/usr/local/lib/gosint/python/bin:$PATH
 
 EXPOSE 4000
 VOLUME /data

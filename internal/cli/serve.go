@@ -185,6 +185,12 @@ func RunNode(ctx context.Context, cfg *env.Config, opts NodeOptions) error {
 		if !sandbox.Supported() {
 			log.Warn("script sandbox unsupported on this node, transform file scripts run unconfined unless switched on")
 		}
+
+		for _, p := range cfg.OwnFiles() {
+			if sandbox.Covered(p) {
+				log.Warn("script sandbox reaches a file of the server's own, move it out of the system trees", "path", p)
+			}
+		}
 	}
 
 	if p, ok := db.(*postgres.Postgres); ok {

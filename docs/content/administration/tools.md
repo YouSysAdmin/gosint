@@ -48,9 +48,14 @@ own, their settings are the sandbox:
   setting. Switched off, they run as the server's own user, unconfined.
 - **May also read.** Absolute paths, one per line, a script may read beyond
   the system and its own directory: a wordlist, a GeoIP database, an
-  interpreter installed under a home directory.
+  interpreter installed under a home directory or `/opt`.
 - **May also write.** Absolute paths, one per line, a script may write to
-  beyond its scratch directory.
+  beyond its scratch directory. A program put in a writable place does not
+  run.
+
+A path reaching one of the server's own files on this node (its config, the
+sqlite database, the unseal key file, the TLS pair) is refused with the file
+named, a directory holding one included.
 
 What a confined script may reach by default is listed under
 [the sandbox](/extending/transform-files/#the-sandbox).

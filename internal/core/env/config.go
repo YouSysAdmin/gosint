@@ -36,6 +36,9 @@ type Config struct {
 	// Source describes where these values came from, for the boot log.
 	Source string `mapstructure:"-"`
 
+	// File is the yaml read, empty when none was.
+	File string `mapstructure:"-"`
+
 	Server     ServerConfig     `mapstructure:"server"`
 	Database   DatabaseConfig   `mapstructure:"database"`
 	Logging    LoggingConfig    `mapstructure:"logging"`
@@ -266,6 +269,7 @@ func Load(path string, defaults ...map[string]any) (*Config, error) {
 	}
 
 	source := "file " + v.ConfigFileUsed()
+	file := v.ConfigFileUsed()
 	if err := v.ReadInConfig(); err != nil {
 		// The implicit ./gosint.yaml may be absent. One that is there
 		// but unreadable is an error, as is any file named explicitly.
@@ -274,6 +278,7 @@ func Load(path string, defaults ...map[string]any) (*Config, error) {
 		}
 
 		source = "environment only"
+		file = ""
 	}
 
 	var c Config
@@ -282,6 +287,7 @@ func Load(path string, defaults ...map[string]any) (*Config, error) {
 	}
 
 	c.Source = source
+	c.File = file
 	trimStringSlices(reflect.ValueOf(&c))
 
 	return &c, nil
@@ -354,6 +360,38 @@ func bindEnvKeys(v *viper.Viper, t reflect.Type, prefix string) {
 
 		_ = v.BindEnv(key)
 	}
+}
+
+// OwnFiles is what the server keeps on disk and no script may be let
+// at: the config, the sqlite database, the unseal key file, the TLS
+// pair and the generated certificate's directory. A relative path is
+// resolved from the working directory, as the server reads it.
+func (c *Config) OwnFiles() []string {
+	var out []string
+
+	add := func(p string) {
+		if p == "" {
+			return
+		}
+
+		if abs, err := filepath.Abs(p); err == nil {
+			p = abs
+		}
+
+		out = append(out, p)
+	}
+
+	add(c.File)
+	if c.Database.Driver != DriverPostgres {
+		add(c.Database.DSN)
+	}
+
+	add(c.Vault.UnsealKeyFile)
+	add(c.Server.TLS.Cert)
+	add(c.Server.TLS.Key)
+	add(c.TLSCacheDir())
+
+	return out
 }
 
 // DefaultCacheDir is where transforms keep downloaded reference data

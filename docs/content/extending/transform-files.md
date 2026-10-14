@@ -238,14 +238,18 @@ was started with stay out. An API key a script needs is a
 On Linux with Landlock (kernel 5.13 or newer) a script runs **confined**,
 which is the default wherever the node supports it. It may:
 
-- read and run the system: `/usr`, `/bin`, `/sbin`, `/lib*`, `/opt` and the
+- read and run the system: `/usr`, `/bin`, `/sbin`, `/lib*` and the
   entries of `/etc` a runtime needs (certificates, name resolution, the time
-  zone, the dynamic linker, `passwd` and `group`), not `/etc` as a whole,
+  zone, the dynamic linker, `passwd` and `group`), not `/etc` as a whole and
+  not `/opt`, where an install of the server itself often sits,
 - read its own directory, but not write to it,
 - read and write a scratch directory of its own, made for the run and
-  removed after it, which is its `HOME`, `TMPDIR`, `TMP` and `TEMP`,
+  removed after it, which is its `HOME`, `TMPDIR`, `TMP` and `TEMP`, but
+  not run a program it put there: what a script writes is data,
 - reach the paths an administrator adds on the [Tools](/administration/tools/#transform-file-scripts)
-  page, a wordlist or a database to read, a directory to write.
+  page, a wordlist or a database to read, a directory to write. A tool
+  under `/opt` is such a path. A path reaching the server's own files (its
+  config, the sqlite database, the unseal key file, the TLS pair) is refused.
 
 Everything else is refused, the server's data directory, its config, the
 unseal key file, the home of the server's user and `/proc` among them, so
@@ -257,7 +261,8 @@ A confined script that touches what it may not gets a permission error
 from the system, which shows up in the stderr tail of the scan log. A
 path added on the Tools page that this node does not have is reported
 in the scan log before the script runs, and the server's log says at
-start when the node cannot confine scripts at all.
+start when the node cannot confine scripts at all, or when one of the
+server's own files lies where every script may read (under `/usr`, say).
 
 {{< callout type="warning" title="Without the sandbox, a script is code the server runs" >}}
 On macOS, Windows and a Linux kernel without Landlock, a script runs as the

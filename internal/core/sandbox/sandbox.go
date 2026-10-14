@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // Arg is the first argument that turns the binary into the helper.
@@ -38,9 +39,11 @@ type Policy struct {
 
 // systemRead is what an interpreter and its libraries need to start:
 // the system trees, and single entries of /etc rather than all of it,
-// where a server's own config may live.
+// where a server's own config may live. Not /opt, where an install of
+// the server itself often sits: a tool there is added on the Tools
+// page.
 var systemRead = []string{
-	"/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32", "/opt",
+	"/usr", "/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32",
 	"/etc/ssl", "/etc/ca-certificates", "/etc/ca-certificates.conf", "/etc/pki",
 	"/etc/resolv.conf", "/etc/hosts", "/etc/host.conf", "/etc/nsswitch.conf", "/etc/gai.conf",
 	"/etc/services", "/etc/protocols", "/etc/localtime", "/etc/timezone",
@@ -68,6 +71,30 @@ func Default(dir, scratch string, read, write []string) Policy {
 	p.Write = append(p.Write, write...)
 
 	return p
+}
+
+// Reaches tells whether path lies at or under one of the grants, so a
+// policy holding them opens it.
+func Reaches(grants []string, path string) bool {
+	path = filepath.Clean(path)
+	for _, g := range grants {
+		rel, err := filepath.Rel(filepath.Clean(g), path)
+		if err != nil {
+			continue
+		}
+
+		if rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Covered tells whether the default policy lets every script reach
+// path: the server's own files must not be.
+func Covered(path string) bool {
+	return Reaches(systemRead, path) || Reaches(systemWrite, path)
 }
 
 // Command is argv run confined by p: this binary started as the helper.
