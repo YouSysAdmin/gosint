@@ -13,6 +13,7 @@ import {
   updateEdge,
 } from '@/api/sketches'
 import type { Transform, Flow, GraphEdge, GraphNode } from '@/api/types'
+import { FLAGS, FLAG_COLORS } from '@/composables/flags'
 import type { Relatives } from '@/composables/graphSelect'
 import { useCatalogStore } from '@/stores/catalog'
 import { useNotificationStore } from '@/stores/notification'
@@ -50,15 +51,6 @@ const emit = defineEmits<{
   (e: 'invert'): void
   (e: 'path', a: GraphNode, b: GraphNode): void
 }>()
-
-const FLAGS = ['red', 'orange', 'yellow', 'green', 'blue']
-const FLAG_COLORS: Record<string, string> = {
-  red: '#ef4444',
-  orange: '#f97316',
-  yellow: '#eab308',
-  green: '#22c55e',
-  blue: '#3b82f6',
-}
 
 const catalog = useCatalogStore()
 const toast = useNotificationStore()
@@ -427,7 +419,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .menu {
   position: fixed;
-  z-index: 50;
+  z-index: var(--z-float);
   width: 320px;
   max-height: calc(100vh - 16px);
   display: flex;
@@ -490,26 +482,6 @@ onBeforeUnmount(() => {
 
 .foot {
   border-top: 1px solid var(--border-primary);
-}
-
-.menu-item {
-  padding: 6px 10px;
-  text-align: left;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-primary);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 13px;
-}
-
-.menu-item:hover {
-  background: var(--bg-hover);
-}
-
-.menu-item.danger {
-  color: var(--danger-fg);
 }
 
 .flags {

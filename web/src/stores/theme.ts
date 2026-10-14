@@ -39,18 +39,19 @@ export const useThemeStore = defineStore('theme', () => {
     mode.value === 'system' ? systemDark.value : mode.value === 'dark',
   )
 
-  // One effect for both jobs: it runs on creation, so the attribute is
-  // correct before first paint, and re-runs on either the choice or
-  // the OS changing. Splitting persistence from painting would mean
-  // two places that have to agree about when to fire.
+  // Painting only: it runs on creation, so the attribute is correct
+  // before first paint, and re-runs on either the choice or the OS
+  // changing. Nothing is stored here, so a person who never chose
+  // keeps following the system rather than having "system" written
+  // down for them.
   watchEffect(() => {
-    storageSet(STORAGE_KEY, mode.value)
     document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light')
   })
 
-  /** Pick a mode explicitly - the three-way control in the sidebar. */
+  /** Pick a mode explicitly - the three-way control in the account menu. */
   function setMode(next: ThemeMode) {
     mode.value = next
+    storageSet(STORAGE_KEY, next)
   }
 
   /**
@@ -60,7 +61,7 @@ export const useThemeStore = defineStore('theme', () => {
    * be undone by their OS an hour later.
    */
   function toggle() {
-    mode.value = isDark.value ? 'light' : 'dark'
+    setMode(isDark.value ? 'light' : 'dark')
   }
 
   return { mode, isDark, setMode, toggle }

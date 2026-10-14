@@ -8,16 +8,24 @@ import { deleteModel, listModels, saveModel } from '@/api/admin'
 import { apiErrorMessage } from '@/api/client'
 import type { LlmModelAdmin, LlmModelInput } from '@/api/types'
 import BaseModal from '@/components/BaseModal.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import FormField from '@/components/FormField.vue'
+import LoadingBlock from '@/components/LoadingBlock.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AdminNav from '@/views/admin/AdminNav.vue'
+import { useFieldErrors } from '@/composables/fieldErrors'
 import { useConfirm } from '@/composables/useConfirm'
 import { useNotificationStore } from '@/stores/notification'
 
 const toast = useNotificationStore()
 const { confirm } = useConfirm()
+const { capture, clear } = useFieldErrors()
 const models = ref<LlmModelAdmin[]>([])
 const busy = ref('')
+// The first load shows the spinner, or a retry when it failed. A
+// refresh after a change keeps the list in place.
+const loaded = ref(false)
+const loadError = ref('')
 
 interface Form {
   name: string
@@ -53,12 +61,16 @@ const form = ref<Form>(blank())
 async function load() {
   try {
     models.value = await listModels()
+    loaded.value = true
+    loadError.value = ''
   } catch (err) {
     toast.error(apiErrorMessage(err))
+    if (!loaded.value) loadError.value = apiErrorMessage(err)
   }
 }
 
 function open(m: LlmModelAdmin | null) {
+  clear()
   editId.value = m?.id ?? ''
   hasKey.value = m?.has_api_key ?? false
   form.value = m
@@ -104,13 +116,14 @@ async function save() {
   if (f.api_key) body.api_key = f.api_key
   else if (f.clear_key) body.api_key = ''
   busy.value = 'save'
+  clear()
   try {
     await saveModel(editId.value || null, body)
     editing.value = false
     toast.success('Model saved')
     await load()
   } catch (err) {
-    toast.error(apiErrorMessage(err))
+    if (!capture(err)) toast.error(apiErrorMessage(err))
   } finally {
     busy.value = ''
   }
@@ -153,7 +166,14 @@ onMounted(load)
   </PageHeader>
   <AdminNav />
 
-  <div class="card">
+  <LoadingBlock v-if="!loaded && !loadError" />
+  <div v-else-if="!loaded" class="card">
+    <EmptyState title="The models could not be loaded">
+      <p>{{ loadError }}</p>
+      <button class="btn btn-secondary" @click="load">Retry</button>
+    </EmptyState>
+  </div>
+  <div v-else class="card">
     <div class="card-body">
       <p v-if="!models.length" class="text-sm text-muted">
         No model yet. Add one and the assistant and the template generator can answer. Each person
@@ -203,7 +223,7 @@ onMounted(load)
     @close="editing = false"
     @submit="save"
   >
-    <FormField label="Name" required hint="What people see in the picker">
+    <FormField label="Name" field="name" required hint="What people see in the picker">
       <input
         v-model="form.name"
         class="form-input"
@@ -213,7 +233,7 @@ onMounted(load)
       />
     </FormField>
     <div class="two">
-      <FormField label="API">
+      <FormField label="API" field="api">
         <select v-model="form.api" class="form-select">
           <option value="openai">
             OpenAI style (OpenAI, Mistral, OpenRouter, Ollama, LM Studio)
@@ -221,7 +241,7 @@ onMounted(load)
           <option value="anthropic">Anthropic</option>
         </select>
       </FormField>
-      <FormField label="Tools" hint="Auto offers them to a remote service only">
+      <FormField label="Tools" field="tools" hint="Auto offers them to a remote service only">
         <select v-model="form.tools" class="form-select">
           <option value="auto">Auto</option>
           <option value="on">On</option>
@@ -231,20 +251,30 @@ onMounted(load)
     </div>
     <FormField
       label="Base URL"
+      field="base_url"
       required
       hint="The API root, https://api.openai.com/v1 or the host alone for Anthropic"
     >
       <input v-model="form.base_url" class="form-input" required maxlength="400" />
     </FormField>
-    <FormField label="Model" hint="Empty on a local server answers with the model it has loaded">
+    <FormField
+      label="Model"
+      field="model"
+      hint="Empty on a local server answers with the model it has loaded"
+    >
       <input v-model="form.model" class="form-input" maxlength="200" placeholder="gpt-4o-mini" />
     </FormField>
     <div class="two">
-      <FormField label="Secret name" hint="Each person stores their key in Secrets under it">
+      <FormField
+        label="Secret name"
+        field="key_name"
+        hint="Each person stores their key in Secrets under it"
+      >
         <input v-model="form.key_name" class="form-input code-font" required maxlength="128" />
       </FormField>
       <FormField
         label="Server key"
+        field="api_key"
         :hint="
           hasKey
             ? 'Stored, leave empty to keep it'

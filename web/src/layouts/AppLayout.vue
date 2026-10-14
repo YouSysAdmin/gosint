@@ -24,8 +24,12 @@ const nav = computed(() => [
   ...(auth.user?.admin ? [{ to: '/admin/users', label: 'Admin', icon: 'users' }] : []),
 ])
 
+// A link covers its page's sub-pages too: Transforms holds the
+// templates, Admin every admin page.
 const here = (to: string) =>
-  route.path.startsWith(to) || (to === '/transforms' && route.path.startsWith('/templates'))
+  route.path.startsWith(to) ||
+  (to === '/transforms' && route.path.startsWith('/templates')) ||
+  (to === '/admin/users' && route.path.startsWith('/admin'))
 const isGraph = computed(() => route.name === 'sketch')
 </script>
 
@@ -75,7 +79,7 @@ const isGraph = computed(() => route.name === 'sketch')
   border-bottom: 1px solid var(--sidebar-border);
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: var(--z-topbar);
 }
 
 .brand {

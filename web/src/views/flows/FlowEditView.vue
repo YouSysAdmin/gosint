@@ -19,8 +19,8 @@ import {
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { apiErrorMessage } from '@/api/client'
 import { checkFlow, deleteFlow, getFlow, listTransforms, saveFlow } from '@/api/catalog'
 import type { Transform, FlowStep } from '@/api/types'
@@ -310,6 +310,22 @@ const definition = computed(() => ({
   layout: { positions: positions.value },
 }))
 
+// What was last read or saved, as text, so leaving with an edit asks
+// first. The layout counts, it is saved with the rest.
+const savedState = ref('')
+const state = computed(() =>
+  JSON.stringify({
+    name: name.value,
+    description: description.value,
+    definition: definition.value,
+  }),
+)
+const dirty = computed(() => !loading.value && state.value !== savedState.value)
+
+function markSaved() {
+  savedState.value = state.value
+}
+
 async function check(): Promise<boolean> {
   const loose = steps.value.filter((s) => !s.after).map((s) => s.id)
   if (loose.length) {
@@ -333,6 +349,7 @@ async function save() {
   try {
     if (!(await check())) return
     const f = await saveFlow(id.value, name.value, description.value, definition.value)
+    markSaved()
     toast.success('Flow saved')
     if (!id.value) await router.replace(`/flows/${f.id}`)
   } catch (err) {
@@ -350,6 +367,7 @@ async function remove() {
     return
   try {
     await deleteFlow(id.value)
+    markSaved()
     await router.push('/flows')
   } catch (err) {
     toast.error(apiErrorMessage(err))
@@ -388,8 +406,32 @@ onMounted(async () => {
   } catch (err) {
     toast.error(apiErrorMessage(err))
   } finally {
+    markSaved()
     loading.value = false
   }
+})
+
+// The browser asks before closing the tab while an edit is unsaved.
+function onUnload(ev: BeforeUnloadEvent) {
+  ev.preventDefault()
+}
+
+watch(dirty, (d) => {
+  if (d) window.addEventListener('beforeunload', onUnload)
+  else window.removeEventListener('beforeunload', onUnload)
+})
+
+onBeforeUnmount(() => window.removeEventListener('beforeunload', onUnload))
+
+onBeforeRouteLeave(async () => {
+  if (!dirty.value) return true
+
+  return confirm({
+    title: 'Leave without saving?',
+    message: 'The changes to this flow are not saved.',
+    confirmText: 'Leave',
+    variant: 'warning',
+  })
 })
 </script>
 

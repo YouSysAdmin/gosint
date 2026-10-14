@@ -215,7 +215,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .quick {
   position: fixed;
-  z-index: 40;
+  z-index: var(--z-float);
   width: 290px;
   padding: 6px;
   background: var(--bg-popover);

@@ -1792,7 +1792,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  z-index: 30;
+  z-index: var(--z-topbar);
   min-width: 200px;
   max-height: 320px;
   overflow: auto;
@@ -1801,23 +1801,6 @@ onBeforeUnmount(() => {
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-}
-
-.switch-menu .menu-item {
-  display: block;
-  width: 100%;
-  padding: 6px 10px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-primary);
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.switch-menu .menu-item:hover {
-  background: var(--bg-hover);
 }
 
 .switch-menu .on {
@@ -1844,7 +1827,7 @@ onBeforeUnmount(() => {
   top: 100%;
   left: 0;
   right: 0;
-  z-index: 10;
+  z-index: var(--z-raised);
   background: var(--bg-popover);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
@@ -1925,7 +1908,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--accent, #3b82f6);
+  color: var(--graph-accent);
 }
 
 .tools {
@@ -1988,7 +1971,7 @@ onBeforeUnmount(() => {
   padding: 0 3px;
   border-radius: 8px;
   background: var(--graph-accent);
-  color: #fff;
+  color: var(--text-on-status);
   font-size: 10px;
   line-height: 15px;
 }
@@ -2006,31 +1989,6 @@ onBeforeUnmount(() => {
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-}
-
-.segmented {
-  display: inline-flex;
-  border: 1px solid var(--border-button);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.segmented button {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  border: 0;
-  cursor: pointer;
-}
-
-.segmented button + button {
-  border-left: 1px solid var(--border-button);
-}
-
-.segmented button.active {
-  background: var(--bg-active);
-  color: var(--text-primary);
 }
 
 .hint {
@@ -2052,7 +2010,7 @@ onBeforeUnmount(() => {
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: 15;
+  z-index: var(--z-panel);
   width: 340px;
   overflow: auto;
   border-left: 1px solid var(--border-primary);

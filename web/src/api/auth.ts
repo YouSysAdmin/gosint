@@ -1,4 +1,5 @@
 import api from './client'
+import { seg } from './path'
 import type { AuthInfo, LinkedIdentity, Passkey, Profile, UserSession } from './types'
 
 export async function me(): Promise<Profile> {
@@ -120,11 +121,11 @@ export async function passkeyRegisterFinish(name: string, attestation: unknown):
 }
 
 export async function passkeyRename(id: string, name: string): Promise<void> {
-  await api.put(`/auth/passkeys/${id}`, { name })
+  await api.put(`/auth/passkeys/${seg(id)}`, { name })
 }
 
 export async function passkeyDelete(id: string, password: string): Promise<void> {
-  await api.post(`/auth/passkeys/${id}/delete`, { password })
+  await api.post(`/auth/passkeys/${seg(id)}/delete`, { password })
 }
 
 export async function passkeyLoginBegin() {
@@ -141,7 +142,7 @@ export async function sessions(): Promise<UserSession[]> {
 }
 
 export async function revokeSession(id: string): Promise<void> {
-  await api.delete(`/auth/sessions/${id}`)
+  await api.delete(`/auth/sessions/${seg(id)}`)
 }
 
 export async function revokeOtherSessions(): Promise<number> {
@@ -156,10 +157,10 @@ export async function identities(): Promise<LinkedIdentity[]> {
 // linkProvider starts linking a provider and answers where to send the
 // browser, the provider's sign-in page.
 export async function linkProvider(slug: string): Promise<string> {
-  return (await api.post<{ redirect_url: string }>(`/auth/oauth/${encodeURIComponent(slug)}/link`))
-    .data.redirect_url
+  return (await api.post<{ redirect_url: string }>(`/auth/oauth/${seg(slug)}/link`)).data
+    .redirect_url
 }
 
 export async function unlinkIdentity(id: string): Promise<void> {
-  await api.delete(`/auth/identities/${id}`)
+  await api.delete(`/auth/identities/${seg(id)}`)
 }

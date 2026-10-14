@@ -14,17 +14,25 @@ import {
 import type { OAuthProvider, OAuthProviderInput, OAuthTestResult } from '@/api/types'
 import BaseModal from '@/components/BaseModal.vue'
 import CopyButton from '@/components/CopyButton.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import FormField from '@/components/FormField.vue'
+import LoadingBlock from '@/components/LoadingBlock.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AdminNav from '@/views/admin/AdminNav.vue'
+import { useFieldErrors } from '@/composables/fieldErrors'
 import { useConfirm } from '@/composables/useConfirm'
 import { useNotificationStore } from '@/stores/notification'
 
 const toast = useNotificationStore()
 const { confirm } = useConfirm()
+const { capture, clear } = useFieldErrors()
 const providers = ref<OAuthProvider[]>([])
 const tests = ref<Record<string, OAuthTestResult>>({})
 const busy = ref('')
+// The first load shows the spinner, or a retry when it failed. A
+// refresh after a change keeps the list in place.
+const loaded = ref(false)
+const loadError = ref('')
 
 interface Form {
   name: string
@@ -84,12 +92,16 @@ const join = (v: string[] | undefined) => (v ?? []).join(', ')
 async function load() {
   try {
     providers.value = await listProviders()
+    loaded.value = true
+    loadError.value = ''
   } catch (err) {
     toast.error(apiErrorMessage(err))
+    if (!loaded.value) loadError.value = apiErrorMessage(err)
   }
 }
 
 function open(p: OAuthProvider | null) {
+  clear()
   editing.value = {
     id: p?.id ?? '',
     advanced: false,
@@ -148,6 +160,7 @@ async function save() {
   // Only a typed secret travels, so an edit keeps the stored one.
   if (f.client_secret) body.client_secret = f.client_secret
   busy.value = 'save'
+  clear()
   try {
     if (e.id) await updateProvider(e.id, body)
     else await createProvider(body)
@@ -155,7 +168,7 @@ async function save() {
     toast.success('Provider saved')
     await load()
   } catch (err) {
-    toast.error(apiErrorMessage(err))
+    if (!capture(err)) toast.error(apiErrorMessage(err))
   } finally {
     busy.value = ''
   }
@@ -197,7 +210,14 @@ onMounted(load)
   </PageHeader>
   <AdminNav />
 
-  <div class="card">
+  <LoadingBlock v-if="!loaded && !loadError" />
+  <div v-else-if="!loaded" class="card">
+    <EmptyState title="The providers could not be loaded">
+      <p>{{ loadError }}</p>
+      <button class="btn btn-secondary" @click="load">Retry</button>
+    </EmptyState>
+  </div>
+  <div v-else class="card">
     <div class="card-body">
       <p v-if="!providers.length" class="text-sm text-muted">
         No identity provider yet. Add one and the sign-in page offers it.
@@ -246,23 +266,28 @@ onMounted(load)
     @close="editing = null"
     @submit="save"
   >
-    <FormField label="Name" required>
+    <FormField label="Name" field="name" required>
       <input v-model="editing.form.name" class="form-input" required maxlength="100" />
     </FormField>
     <div class="two">
-      <FormField label="Type">
+      <FormField label="Type" field="type">
         <select v-model="editing.form.type" class="form-select">
           <option value="oidc">OpenID Connect</option>
           <option value="google">Google</option>
         </select>
       </FormField>
-      <FormField label="Slug" hint="In the sign-in URL, derived from the name when empty">
+      <FormField
+        label="Slug"
+        field="slug"
+        hint="In the sign-in URL, derived from the name when empty"
+      >
         <input v-model="editing.form.slug" class="form-input" maxlength="60" />
       </FormField>
     </div>
     <FormField
       v-if="editing.form.type === 'oidc'"
       label="Issuer"
+      field="issuer"
       hint="The provider's URL, discovery reads its document"
     >
       <input
@@ -272,11 +297,12 @@ onMounted(load)
       />
     </FormField>
     <div class="two">
-      <FormField label="Client id">
+      <FormField label="Client id" field="client_id">
         <input v-model="editing.form.client_id" class="form-input" />
       </FormField>
       <FormField
         label="Client secret"
+        field="client_secret"
         :hint="editing.id ? 'Leave empty to keep the stored one' : ''"
       >
         <input
@@ -306,7 +332,11 @@ onMounted(load)
       Off, a person with an account links the provider from their profile. An administrator's
       account is never linked this way.
     </p>
-    <FormField label="Allowed domains" hint="Comma separated, empty admits every domain">
+    <FormField
+      label="Allowed domains"
+      field="allowed_domains"
+      hint="Comma separated, empty admits every domain"
+    >
       <input v-model="editing.form.allowed_domains" class="form-input" placeholder="corp.example" />
     </FormField>
     <button
@@ -330,32 +360,38 @@ onMounted(load)
       </p>
       <FormField
         label="Allowed emails"
+        field="allowed_emails"
         hint="Comma separated. When set, only these addresses get in and the domains and groups are not checked"
       >
         <input v-model="editing.form.allowed_emails" class="form-input" />
       </FormField>
       <div class="two">
-        <FormField label="Groups claim">
+        <FormField label="Groups claim" field="groups_claim">
           <input v-model="editing.form.groups_claim" class="form-input" placeholder="groups" />
         </FormField>
-        <FormField label="Allowed groups" hint="Comma separated">
+        <FormField label="Allowed groups" field="allowed_groups" hint="Comma separated">
           <input v-model="editing.form.allowed_groups" class="form-input" />
         </FormField>
       </div>
-      <FormField label="Scopes" hint="Comma separated, openid email profile by default">
+      <FormField
+        label="Scopes"
+        field="scopes"
+        hint="Comma separated, openid email profile by default"
+      >
         <input v-model="editing.form.scopes" class="form-input" />
       </FormField>
       <FormField
         label="Authorization URL"
+        field="auth_url"
         hint="Manual endpoints, for a provider without discovery"
       >
         <input v-model="editing.form.auth_url" class="form-input" />
       </FormField>
       <div class="two">
-        <FormField label="Token URL">
+        <FormField label="Token URL" field="token_url">
           <input v-model="editing.form.token_url" class="form-input" />
         </FormField>
-        <FormField label="UserInfo URL">
+        <FormField label="UserInfo URL" field="userinfo_url">
           <input v-model="editing.form.userinfo_url" class="form-input" />
         </FormField>
       </div>

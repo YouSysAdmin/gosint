@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // Rules hiding entities from the graph: a property, a comparison and a
 // value, every rule having to match.
+// Edits the bound rules in place, the parent passes a reactive ref.
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { FLAGS } from '@/composables/flags'
 import { needsValue, OPERATORS, type Rule } from '@/composables/graphFilters'
 
 defineProps<{ fields: string[]; hidden: number }>()
@@ -92,7 +94,7 @@ onBeforeUnmount(() => {
         v-if="needsValue(r.op)"
         :value="drafts.get(i) ?? r.value"
         class="form-input"
-        :placeholder="r.field === 'flag' ? 'red, orange, yellow, green, blue' : 'value'"
+        :placeholder="r.field === 'flag' ? FLAGS.join(', ') : 'value'"
         @input="typed(i, ($event.target as HTMLInputElement).value)"
         @blur="commit(i)"
       />
@@ -116,7 +118,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 56px;
   left: 12px;
-  z-index: 20;
+  z-index: var(--z-popover);
   width: 420px;
   padding: 12px;
   background: var(--bg-popover);

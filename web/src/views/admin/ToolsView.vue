@@ -9,7 +9,9 @@ import { onMounted, ref } from 'vue'
 import { getTools, saveTools } from '@/api/admin'
 import { apiErrorMessage } from '@/api/client'
 import type { ToolInput, ToolSetting } from '@/api/types'
+import EmptyState from '@/components/EmptyState.vue'
 import FormField from '@/components/FormField.vue'
+import LoadingBlock from '@/components/LoadingBlock.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AdminNav from '@/views/admin/AdminNav.vue'
 import { useNotificationStore } from '@/stores/notification'
@@ -17,6 +19,10 @@ import { useNotificationStore } from '@/stores/notification'
 const toast = useNotificationStore()
 const tools = ref<ToolSetting[]>([])
 const busy = ref(false)
+// The first load shows the spinner, or a retry when it failed, and the
+// form only once the settings are in it.
+const loaded = ref(false)
+const loadError = ref('')
 
 // The path lists as typed, one per line, by tool name.
 const reads = ref<Record<string, string>>({})
@@ -51,8 +57,11 @@ function input(t: ToolSetting): ToolInput {
 async function load() {
   try {
     take(await getTools())
+    loaded.value = true
+    loadError.value = ''
   } catch (err) {
     toast.error(apiErrorMessage(err))
+    if (!loaded.value) loadError.value = apiErrorMessage(err)
   }
 }
 
@@ -75,7 +84,14 @@ onMounted(load)
   <PageHeader title="Tools" />
   <AdminNav />
 
-  <form class="card" @submit.prevent="save">
+  <LoadingBlock v-if="!loaded && !loadError" />
+  <div v-else-if="!loaded" class="card">
+    <EmptyState title="The tools could not be loaded">
+      <p>{{ loadError }}</p>
+      <button class="btn btn-secondary" @click="load">Retry</button>
+    </EmptyState>
+  </div>
+  <form v-else class="card" @submit.prevent="save">
     <div class="card-body">
       <div v-for="t in tools" :key="t.name" class="tool">
         <div class="head">

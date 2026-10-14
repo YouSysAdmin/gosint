@@ -3,6 +3,7 @@
 // shown, the rest behind a toggle, which starts open when any of them
 // has a value already. Every text and number input writes a string, so
 // a number field compares like the rest and toProperties types it.
+// Edits the bound values object in place, the parent passes a reactive ref.
 import { computed, onMounted, ref, watch } from 'vue'
 import { listKeys } from '@/api/catalog'
 import type { TypeField } from '@/api/types'

@@ -13,11 +13,14 @@ import {
 import { apiErrorMessage } from '@/api/client'
 import type { CustomField, CustomType } from '@/api/types'
 import BaseModal from '@/components/BaseModal.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import EntityIcon from '@/components/sketch/EntityIcon.vue'
 import FormField from '@/components/FormField.vue'
+import LoadingBlock from '@/components/LoadingBlock.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AdminNav from '@/views/admin/AdminNav.vue'
 import { iconFor, iconNames } from '@/composables/entityIcons'
+import { useFieldErrors } from '@/composables/fieldErrors'
 import { kindLabel } from '@/composables/fieldKinds'
 import { useConfirm } from '@/composables/useConfirm'
 import { useCatalogStore } from '@/stores/catalog'
@@ -26,13 +29,18 @@ import { useNotificationStore } from '@/stores/notification'
 const catalog = useCatalogStore()
 const toast = useNotificationStore()
 const { confirm } = useConfirm()
+const { capture, clear } = useFieldErrors()
 
 const list = ref<CustomType[]>([])
-const loading = ref(true)
+// The first load shows the spinner, or a retry when it failed.
+const loaded = ref(false)
+const loadError = ref('')
 // A field in the form keeps its options as the text typed, one per
 // line, parsed into the list only on save, so Enter is not swallowed by
-// a round trip through the list while typing.
-type FieldDraft = CustomField & { optionsText: string }
+// a round trip through the list while typing. The uid keys the row, so
+// removing a field from the middle does not hand its inputs to the next.
+type FieldDraft = CustomField & { optionsText: string; uid: number }
+let nextUid = 0
 type TypeDraft = Omit<CustomTypeInput, 'fields'> & { fields: FieldDraft[] }
 
 const editing = ref<{ id: string | null; t: TypeDraft } | null>(null)
@@ -49,15 +57,17 @@ function kindsFor(f: FieldDraft): string[] {
 async function load() {
   try {
     list.value = await listCustomTypes()
+    loaded.value = true
+    loadError.value = ''
   } catch (err) {
     toast.error(apiErrorMessage(err))
-  } finally {
-    loading.value = false
+    if (!loaded.value) loadError.value = apiErrorMessage(err)
   }
 }
 
-onMounted(async () => {
-  await Promise.all([load(), catalog.load()])
+onMounted(() => {
+  void load()
+  catalog.load().catch((err) => toast.error(apiErrorMessage(err)))
 })
 
 function blankField(primary = false): FieldDraft {
@@ -71,15 +81,16 @@ function blankField(primary = false): FieldDraft {
     long: false,
     options: null,
     optionsText: '',
+    uid: ++nextUid,
   }
 }
 
 function draftOf(f: CustomField): FieldDraft {
-  return { ...f, optionsText: (f.options ?? []).join('\n') }
+  return { ...f, optionsText: (f.options ?? []).join('\n'), uid: ++nextUid }
 }
 
 function fieldOf(d: FieldDraft): CustomField {
-  const { optionsText, ...f } = d
+  const { optionsText, uid: _uid, ...f } = d
   const opts = optionsText
     .split('\n')
     .map((s) => s.trim())
@@ -89,6 +100,7 @@ function fieldOf(d: FieldDraft): CustomField {
 }
 
 function open(t: CustomType | null) {
+  clear()
   editing.value = t
     ? { id: t.id, t: { ...t, fields: t.fields.map(draftOf) } }
     : {
@@ -136,6 +148,7 @@ function optionRows(f: FieldDraft): number {
 async function save() {
   if (!editing.value) return
   busy.value = true
+  clear()
   try {
     const t = { ...editing.value.t, fields: editing.value.t.fields.map(fieldOf) }
     await saveCustomType(editing.value.id, t)
@@ -143,14 +156,20 @@ async function save() {
     editing.value = null
     await Promise.all([load(), catalog.reload()])
   } catch (err) {
-    toast.error(apiErrorMessage(err))
+    if (!capture(err)) toast.error(apiErrorMessage(err))
   } finally {
     busy.value = false
   }
 }
 
 async function remove(t: CustomType) {
-  if (!(await confirm({ title: 'Delete the type', message: `Delete the type ${t.title}?` }))) return
+  const ok = await confirm({
+    title: 'Delete the type',
+    message: `Delete the type ${t.title}?`,
+    confirmText: 'Delete',
+    variant: 'danger',
+  })
+  if (!ok) return
   try {
     await deleteCustomType(t.id)
     await Promise.all([load(), catalog.reload()])
@@ -166,10 +185,16 @@ async function remove(t: CustomType) {
   </PageHeader>
   <AdminNav />
 
-  <div class="card">
+  <LoadingBlock v-if="!loaded && !loadError" />
+  <div v-else-if="!loaded" class="card">
+    <EmptyState title="The types could not be loaded">
+      <p>{{ loadError }}</p>
+      <button class="btn btn-secondary" @click="load">Retry</button>
+    </EmptyState>
+  </div>
+  <div v-else class="card">
     <div class="card-body">
-      <p v-if="loading" class="text-sm text-muted">Loading...</p>
-      <p v-else-if="!list.length" class="text-sm text-muted">
+      <p v-if="!list.length" class="text-sm text-muted">
         No type of your own yet. The built-in ones cover the usual ground, a type declared here
         joins them in the palette, the forms and the import for every account.
       </p>
@@ -210,139 +235,140 @@ async function remove(t: CustomType) {
     v-if="editing"
     :title="editing.id ? 'Edit the type' : 'Declare a type'"
     size="modal-w760"
+    form
     @close="editing = null"
+    @submit="save"
   >
-    <form id="type-form" @submit.prevent="save">
-      <div class="grid-2">
-        <FormField
-          label="Name"
-          hint="Lowercase, letters, digits and underscores, fixed once made"
+    <div class="grid-2">
+      <FormField
+        label="Name"
+        field="name"
+        hint="Lowercase, letters, digits and underscores, fixed once made"
+        required
+      >
+        <input
+          v-model="editing.t.name"
+          class="form-input code-font"
+          :disabled="!!editing.id"
           required
-        >
+          pattern="[a-z][a-z0-9_]*"
+        />
+      </FormField>
+      <FormField label="Title" field="title" required>
+        <input v-model="editing.t.title" class="form-input" required />
+      </FormField>
+      <FormField label="Category" field="category">
+        <select v-model="editing.t.category" class="form-select">
+          <option v-for="c in catalog.categories" :key="c.key" :value="c.key">
+            {{ c.title }}
+          </option>
+        </select>
+      </FormField>
+      <FormField label="Icon" field="icon">
+        <div class="icon-pick">
+          <span class="icon-preview" :style="{ color: editing.t.color }">
+            <component :is="iconFor(editing.t.icon)" :size="18" :stroke-width="2" />
+          </span>
+          <select v-model="editing.t.icon" class="form-select">
+            <option v-for="i in iconNames" :key="i" :value="i">{{ i }}</option>
+          </select>
+        </div>
+      </FormField>
+      <FormField label="Colour" field="color">
+        <div class="colour-pick">
+          <input v-model="editing.t.color" type="color" class="colour-swatch" />
           <input
-            v-model="editing.t.name"
             class="form-input code-font"
-            :disabled="!!editing.id"
+            :value="editing.t.color"
+            maxlength="7"
+            placeholder="#6b7280"
+            @change="setColor(($event.target as HTMLInputElement).value)"
+          />
+        </div>
+      </FormField>
+      <FormField label="Description" field="description">
+        <input v-model="editing.t.description" class="form-input" />
+      </FormField>
+    </div>
+
+    <h4 class="mt-3 mb-2">Fields</h4>
+    <p class="text-xs text-muted mb-3">
+      The primary field is the entity's name and what a typed value fills.
+    </p>
+    <div
+      v-for="(f, i) in editing.t.fields"
+      :key="f.uid"
+      class="field-card"
+      :class="{ primary: f.primary }"
+    >
+      <div class="field-head">
+        <label class="radio-label">
+          <input type="radio" name="primary" :checked="f.primary" @change="setPrimary(i)" />
+          Primary
+        </label>
+        <span v-if="f.primary" class="text-xs text-muted">the entity's name</span>
+        <button
+          type="button"
+          class="btn btn-sm btn-secondary ml-auto"
+          :disabled="editing.t.fields.length === 1"
+          @click="removeField(i)"
+        >
+          Remove
+        </button>
+      </div>
+      <div class="field-grid">
+        <FormField label="Name" required>
+          <input
+            v-model="f.name"
+            class="form-input code-font"
+            placeholder="first_name"
             required
             pattern="[a-z][a-z0-9_]*"
           />
         </FormField>
-        <FormField label="Title" required>
-          <input v-model="editing.t.title" class="form-input" required />
-        </FormField>
-        <FormField label="Category">
-          <select v-model="editing.t.category" class="form-select">
-            <option v-for="c in catalog.categories" :key="c.key" :value="c.key">
-              {{ c.title }}
-            </option>
-          </select>
-        </FormField>
-        <FormField label="Icon">
-          <div class="icon-pick">
-            <span class="icon-preview" :style="{ color: editing.t.color }">
-              <component :is="iconFor(editing.t.icon)" :size="18" :stroke-width="2" />
-            </span>
-            <select v-model="editing.t.icon" class="form-select">
-              <option v-for="i in iconNames" :key="i" :value="i">{{ i }}</option>
-            </select>
-          </div>
-        </FormField>
-        <FormField label="Colour">
-          <div class="colour-pick">
-            <input v-model="editing.t.color" type="color" class="colour-swatch" />
-            <input
-              class="form-input code-font"
-              :value="editing.t.color"
-              maxlength="7"
-              placeholder="#6b7280"
-              @change="setColor(($event.target as HTMLInputElement).value)"
-            />
-          </div>
-        </FormField>
-        <FormField label="Description">
-          <input v-model="editing.t.description" class="form-input" />
-        </FormField>
-      </div>
-
-      <h4 class="mt-3 mb-2">Fields</h4>
-      <p class="text-xs text-muted mb-3">
-        The primary field is the entity's name and what a typed value fills.
-      </p>
-      <div
-        v-for="(f, i) in editing.t.fields"
-        :key="i"
-        class="field-card"
-        :class="{ primary: f.primary }"
-      >
-        <div class="field-head">
-          <label class="radio-label">
-            <input type="radio" name="primary" :checked="f.primary" @change="setPrimary(i)" />
-            Primary
-          </label>
-          <span v-if="f.primary" class="text-xs text-muted">the entity's name</span>
-          <button
-            type="button"
-            class="btn btn-sm btn-secondary ml-auto"
-            :disabled="editing.t.fields.length === 1"
-            @click="removeField(i)"
-          >
-            Remove
-          </button>
-        </div>
-        <div class="field-grid">
-          <FormField label="Name" required>
-            <input
-              v-model="f.name"
-              class="form-input code-font"
-              placeholder="first_name"
-              required
-              pattern="[a-z][a-z0-9_]*"
-            />
-          </FormField>
-          <FormField label="Title">
-            <input v-model="f.title" class="form-input" placeholder="First name" />
-          </FormField>
-          <FormField
-            label="Kind"
-            :hint="
-              f.primary ? 'The name is text. Other fields take numbers, dates, yes/no, lists' : ''
-            "
-          >
-            <select v-model="f.kind" class="form-select">
-              <option v-for="k in kindsFor(f)" :key="k" :value="k">{{ kindLabel(k) }}</option>
-            </select>
-          </FormField>
-        </div>
-        <FormField label="Description" hint="Shown under the input when the entity is edited">
-          <input v-model="f.description" class="form-input" />
+        <FormField label="Title">
+          <input v-model="f.title" class="form-input" placeholder="First name" />
         </FormField>
         <FormField
-          v-if="f.kind === 'string'"
-          label="Options"
-          hint="One per line, the field becomes a select. Empty, it is free text."
+          label="Kind"
+          :hint="
+            f.primary ? 'The name is text. Other fields take numbers, dates, yes/no, lists' : ''
+          "
         >
-          <textarea v-model="f.optionsText" class="form-textarea" :rows="optionRows(f)" />
+          <select v-model="f.kind" class="form-select">
+            <option v-for="k in kindsFor(f)" :key="k" :value="k">{{ kindLabel(k) }}</option>
+          </select>
         </FormField>
-        <div class="field-flags">
-          <label class="checkbox-label">
-            <input v-model="f.required" type="checkbox" :disabled="f.primary" /> Required
-          </label>
-          <label v-if="f.kind === 'string'" class="checkbox-label">
-            <input v-model="f.long" type="checkbox" /> Long text
-          </label>
-        </div>
       </div>
-      <button
-        type="button"
-        class="btn btn-sm btn-secondary"
-        @click="editing.t.fields.push(blankField())"
+      <FormField label="Description" hint="Shown under the input when the entity is edited">
+        <input v-model="f.description" class="form-input" />
+      </FormField>
+      <FormField
+        v-if="f.kind === 'string'"
+        label="Options"
+        hint="One per line, the field becomes a select. Empty, it is free text."
       >
-        Add a field
-      </button>
-    </form>
+        <textarea v-model="f.optionsText" class="form-textarea" :rows="optionRows(f)" />
+      </FormField>
+      <div class="field-flags">
+        <label class="checkbox-label">
+          <input v-model="f.required" type="checkbox" :disabled="f.primary" /> Required
+        </label>
+        <label v-if="f.kind === 'string'" class="checkbox-label">
+          <input v-model="f.long" type="checkbox" /> Long text
+        </label>
+      </div>
+    </div>
+    <button
+      type="button"
+      class="btn btn-sm btn-secondary"
+      @click="editing.t.fields.push(blankField())"
+    >
+      Add a field
+    </button>
     <template #footer>
-      <button class="btn btn-secondary" @click="editing = null">Cancel</button>
-      <button class="btn btn-primary" form="type-form" :disabled="busy">Save</button>
+      <button type="button" class="btn btn-secondary" @click="editing = null">Cancel</button>
+      <button class="btn btn-primary" :disabled="busy">Save</button>
     </template>
   </BaseModal>
 </template>

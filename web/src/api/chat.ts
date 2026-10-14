@@ -1,7 +1,8 @@
 import api from './client'
+import { seg } from './path'
 import type { ApplyResult, Chat, ChatMessage, ProposedChange } from './types'
 
-const base = (sketchId: string) => `/sketches/${sketchId}/chats`
+const base = (sketchId: string) => `/sketches/${seg(sketchId)}/chats`
 
 export async function listChats(sketchId: string): Promise<Chat[]> {
   return (await api.get<{ chats: Chat[] }>(base(sketchId))).data.chats
@@ -12,12 +13,12 @@ export async function createChat(sketchId: string, title = ''): Promise<Chat> {
 }
 
 export async function deleteChat(sketchId: string, chatId: string): Promise<void> {
-  await api.delete(`${base(sketchId)}/${chatId}`)
+  await api.delete(`${base(sketchId)}/${seg(chatId)}`)
 }
 
 export async function listMessages(sketchId: string, chatId: string): Promise<ChatMessage[]> {
-  return (await api.get<{ messages: ChatMessage[] }>(`${base(sketchId)}/${chatId}/messages`)).data
-    .messages
+  return (await api.get<{ messages: ChatMessage[] }>(`${base(sketchId)}/${seg(chatId)}/messages`))
+    .data.messages
 }
 
 export async function applyChanges(
@@ -25,7 +26,7 @@ export async function applyChanges(
   chatId: string,
   changes: ProposedChange[],
 ): Promise<ApplyResult> {
-  return (await api.post<ApplyResult>(`${base(sketchId)}/${chatId}/apply`, { changes })).data
+  return (await api.post<ApplyResult>(`${base(sketchId)}/${seg(chatId)}/apply`, { changes })).data
 }
 
 // BLOCK_FENCE opens the fenced block an answer carries its proposal in.
@@ -80,7 +81,7 @@ export async function streamChat(
   withChildren = false,
   modelId = '',
 ): Promise<void> {
-  const res = await fetch(`/api${base(sketchId)}/${chatId}/messages`, {
+  const res = await fetch(`/api${base(sketchId)}/${seg(chatId)}/messages`, {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },

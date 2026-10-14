@@ -1,8 +1,9 @@
 import api, { readBlobError } from './client'
+import { seg } from './path'
 import { fileNameOf } from '@/composables/download'
 import type { Graph, GraphEdge, GraphNode, ImportResult, LogEntry, Scan, Sketch } from './types'
 
-const base = (id: string) => `/sketches/${id}`
+const base = (id: string) => `/sketches/${seg(id)}`
 
 export async function listSketches(): Promise<Sketch[]> {
   return (await api.get<{ sketches: Sketch[] }>('/sketches')).data.sketches
@@ -58,7 +59,7 @@ export async function updateNode(
     metadata?: Record<string, unknown>
   },
 ): Promise<GraphNode> {
-  return (await api.patch<{ node: GraphNode }>(`${base(id)}/nodes/${nodeId}`, p)).data.node
+  return (await api.patch<{ node: GraphNode }>(`${base(id)}/nodes/${seg(nodeId)}`, p)).data.node
 }
 
 export async function deleteNodes(
@@ -131,7 +132,8 @@ export async function addEdge(id: string, source: string, target: string, label:
 }
 
 export async function updateEdge(id: string, edgeId: string, label: string): Promise<GraphEdge> {
-  return (await api.patch<{ edge: GraphEdge }>(`${base(id)}/edges/${edgeId}`, { label })).data.edge
+  return (await api.patch<{ edge: GraphEdge }>(`${base(id)}/edges/${seg(edgeId)}`, { label })).data
+    .edge
 }
 
 export async function deleteEdges(id: string, ids: string[]): Promise<number> {
@@ -244,7 +246,7 @@ export async function listScans(id: string): Promise<Scan[]> {
 }
 
 export async function cancelScan(id: string, scanId: string): Promise<Scan> {
-  return (await api.post<{ scan: Scan }>(`${base(id)}/scans/${scanId}/cancel`)).data.scan
+  return (await api.post<{ scan: Scan }>(`${base(id)}/scans/${seg(scanId)}/cancel`)).data.scan
 }
 
 export async function listLogs(id: string, limit = 300): Promise<LogEntry[]> {
@@ -262,7 +264,7 @@ export async function launchTransform(
   params?: Record<string, string>,
 ) {
   return (
-    await api.post<{ scan: Scan }>(`${base(id)}/transforms/${name}/launch`, {
+    await api.post<{ scan: Scan }>(`${base(id)}/transforms/${seg(name)}/launch`, {
       node_ids: nodeIds,
       params,
     })
@@ -276,7 +278,7 @@ export async function launchTemplate(
   params?: Record<string, string>,
 ) {
   return (
-    await api.post<{ scan: Scan }>(`${base(id)}/templates/${templateId}/launch`, {
+    await api.post<{ scan: Scan }>(`${base(id)}/templates/${seg(templateId)}/launch`, {
       node_ids: nodeIds,
       params,
     })
@@ -285,7 +287,7 @@ export async function launchTemplate(
 
 export async function launchFlow(id: string, flowId: string, nodeIds: string[]) {
   return (
-    await api.post<{ scan: Scan }>(`${base(id)}/flows/${flowId}/launch`, { node_ids: nodeIds })
+    await api.post<{ scan: Scan }>(`${base(id)}/flows/${seg(flowId)}/launch`, { node_ids: nodeIds })
   ).data.scan
 }
 
@@ -302,7 +304,7 @@ export function openEvents(
   id: string,
   on: { log?: (e: LogEntry) => void; scan?: (s: Scan) => void; graph?: (g: GraphChange) => void },
 ): EventSource {
-  const es = new EventSource(`/api/sketches/${id}/events`, { withCredentials: true })
+  const es = new EventSource(`/api/sketches/${seg(id)}/events`, { withCredentials: true })
   es.addEventListener('log', (ev) => on.log?.(JSON.parse((ev as MessageEvent).data)))
   es.addEventListener('scan', (ev) => on.scan?.(JSON.parse((ev as MessageEvent).data)))
   es.addEventListener('graph', (ev) => on.graph?.(JSON.parse((ev as MessageEvent).data)))
@@ -343,14 +345,14 @@ export async function updateSchedule(
   scheduleId: string,
   p: { every_seconds: number; enabled?: boolean; node_ids?: string[] },
 ): Promise<Schedule> {
-  return (await api.patch<{ schedule: Schedule }>(`${base(id)}/schedules/${scheduleId}`, p)).data
-    .schedule
+  return (await api.patch<{ schedule: Schedule }>(`${base(id)}/schedules/${seg(scheduleId)}`, p))
+    .data.schedule
 }
 
 export async function deleteSchedule(id: string, scheduleId: string): Promise<void> {
-  await api.delete(`${base(id)}/schedules/${scheduleId}`)
+  await api.delete(`${base(id)}/schedules/${seg(scheduleId)}`)
 }
 
 export async function runSchedule(id: string, scheduleId: string): Promise<Scan> {
-  return (await api.post<{ scan: Scan }>(`${base(id)}/schedules/${scheduleId}/run`)).data.scan
+  return (await api.post<{ scan: Scan }>(`${base(id)}/schedules/${seg(scheduleId)}/run`)).data.scan
 }

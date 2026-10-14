@@ -257,9 +257,9 @@ defineExpose({ show })
 .palette-overlay {
   position: fixed;
   inset: 0;
-  /* Above a dialog (1000), under the toasts (2000). */
-  z-index: 1500;
-  background: var(--overlay, rgba(0, 0, 0, 0.35));
+  /* Above a dialog, under the toasts. */
+  z-index: var(--z-palette);
+  background: var(--overlay);
   display: flex;
   justify-content: center;
   padding-top: 12vh;

@@ -6,6 +6,7 @@
 import { computed, ref, watch } from 'vue'
 import type { GraphNode } from '@/api/types'
 import EntityIcon from '@/components/sketch/EntityIcon.vue'
+import { FLAGS } from '@/composables/flags'
 import { useDebounced } from '@/composables/useDebounced'
 import { useCatalogStore } from '@/stores/catalog'
 
@@ -36,12 +37,11 @@ const typeFilter = ref('')
 const typeSearch = ref('')
 // The flag colour the list is narrowed to, "" for any.
 const flagFilter = ref('')
-const FLAG_ORDER = ['red', 'orange', 'yellow', 'green', 'blue']
 
 const flags = computed(() => {
   const counts = new Map<string, number>()
   for (const n of props.nodes) if (n.flag) counts.set(n.flag, (counts.get(n.flag) ?? 0) + 1)
-  return FLAG_ORDER.filter((f) => counts.has(f)).map((f) => ({ flag: f, count: counts.get(f)! }))
+  return FLAGS.filter((f) => counts.has(f)).map((f) => ({ flag: f, count: counts.get(f)! }))
 })
 
 const types = computed(() => {
@@ -469,19 +469,19 @@ function dragType(ev: DragEvent, type: string) {
 }
 
 .flag.red {
-  background: #ef4444;
+  background: var(--flag-red);
 }
 .flag.orange {
-  background: #f97316;
+  background: var(--flag-orange);
 }
 .flag.yellow {
-  background: #eab308;
+  background: var(--flag-yellow);
 }
 .flag.green {
-  background: #22c55e;
+  background: var(--flag-green);
 }
 .flag.blue {
-  background: #3b82f6;
+  background: var(--flag-blue);
 }
 
 .pad {

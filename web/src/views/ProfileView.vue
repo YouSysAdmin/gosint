@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // The account: name and avatar, the email being the sign-in and fixed.
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { updateMe } from '@/api/auth'
 import { apiErrorMessage } from '@/api/client'
@@ -23,6 +23,30 @@ const last = ref('')
 const avatar = ref('')
 const busy = ref(false)
 const sessionsCard = ref<InstanceType<typeof AccountSessions> | null>(null)
+
+// The picture drawn beside the name: the saved one, then what was typed
+// once the typing paused or the field was left, so the browser does not
+// fetch every half-typed URL.
+const preview = ref('')
+let previewTimer = 0
+
+function showTyped() {
+  window.clearTimeout(previewTimer)
+  preview.value = avatar.value.trim()
+}
+
+watch(avatar, () => {
+  window.clearTimeout(previewTimer)
+  previewTimer = window.setTimeout(showTyped, 500)
+})
+
+onBeforeUnmount(() => window.clearTimeout(previewTimer))
+
+const initials = computed(() => {
+  const own = (first.value[0] ?? '') + (last.value[0] ?? '')
+
+  return (own || auth.user?.email[0] || '?').toUpperCase()
+})
 
 // A local account holds its own password and second factors. One an
 // identity provider signs in manages those there.
@@ -68,6 +92,7 @@ onMounted(async () => {
   first.value = u?.first_name ?? ''
   last.value = u?.last_name ?? ''
   avatar.value = u?.avatar_url ?? ''
+  showTyped()
 })
 </script>
 
@@ -76,10 +101,8 @@ onMounted(async () => {
   <form class="card narrow" @submit.prevent="save">
     <div class="card-body">
       <div class="flex items-center gap-3 mb-4">
-        <img v-if="avatar" :src="avatar" class="avatar" alt="" />
-        <span v-else class="avatar initials">{{
-          (first[0] ?? '') + (last[0] ?? '') || (auth.user?.email[0] ?? '?').toUpperCase()
-        }}</span>
+        <img v-if="preview" :src="preview" class="avatar" alt="" />
+        <span v-else class="avatar initials">{{ initials }}</span>
         <div>
           <div class="fw-medium">{{ auth.user?.email }}</div>
           <div class="text-xs text-muted">The email is the sign-in and cannot change here.</div>
@@ -94,7 +117,13 @@ onMounted(async () => {
         </FormField>
       </div>
       <FormField label="Avatar URL" hint="A picture shown beside your name">
-        <input v-model="avatar" class="form-input" type="url" placeholder="https://" />
+        <input
+          v-model="avatar"
+          class="form-input"
+          type="url"
+          placeholder="https://"
+          @blur="showTyped"
+        />
       </FormField>
       <button class="btn btn-primary" :disabled="busy">Save</button>
     </div>

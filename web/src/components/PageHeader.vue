@@ -7,9 +7,10 @@
 // beside it. Rendering the group here means a slotted control cannot be
 // anywhere else.
 //
-// The title slot is for pages that carry a subtitle under the heading.
-// It has to be one element, or the count is three again.
-withDefaults(defineProps<{ title?: string }>(), { title: '' })
+// `subtitle` is a muted line under the heading. The title slot is for
+// a page drawing its own heading, and it has to be one element, or
+// the count is three again.
+withDefaults(defineProps<{ title?: string; subtitle?: string }>(), { title: '', subtitle: '' })
 </script>
 
 <template>
@@ -22,6 +23,7 @@ withDefaults(defineProps<{ title?: string }>(), { title: '' })
       <slot name="title">
         <h1>{{ title }}</h1>
       </slot>
+      <p v-if="subtitle" class="header-sub">{{ subtitle }}</p>
     </div>
     <div v-if="$slots.default" class="page-actions"><slot /></div>
   </div>

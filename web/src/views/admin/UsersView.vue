@@ -19,9 +19,12 @@ import { apiErrorMessage } from '@/api/client'
 import type { AdminUser, Investigation } from '@/api/types'
 import BaseModal from '@/components/BaseModal.vue'
 import CopyButton from '@/components/CopyButton.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import FormField from '@/components/FormField.vue'
+import LoadingBlock from '@/components/LoadingBlock.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AdminNav from '@/views/admin/AdminNav.vue'
+import { useFieldErrors } from '@/composables/fieldErrors'
 import { formatDate } from '@/composables/formatDate'
 import { useConfirm } from '@/composables/useConfirm'
 import { useAuthStore } from '@/stores/auth'
@@ -30,11 +33,16 @@ import { useNotificationStore } from '@/stores/notification'
 const auth = useAuthStore()
 const toast = useNotificationStore()
 const { confirm } = useConfirm()
+const { capture, clear } = useFieldErrors()
 
 const users = ref<AdminUser[]>([])
 const total = ref(0)
 const search = ref('')
-const loading = ref(true)
+// The first load shows the spinner, or a retry when it failed. A
+// search or a refresh after an action keeps the rows on screen.
+const loaded = ref(false)
+const loadError = ref('')
+const loading = ref(false)
 const creating = ref<{ email: string; password: string; admin: boolean } | null>(null)
 const editing = ref<{ user: AdminUser; owns: Investigation[]; password: string } | null>(null)
 const link = ref<{ link: string; emailed: boolean } | null>(null)
@@ -59,8 +67,11 @@ async function load() {
     if (n !== asked) return
     users.value = res.users
     total.value = res.total
+    loaded.value = true
+    loadError.value = ''
   } catch (err) {
     toast.error(apiErrorMessage(err))
+    if (!loaded.value) loadError.value = apiErrorMessage(err)
   } finally {
     if (n === asked) loading.value = false
   }
@@ -92,15 +103,21 @@ async function act(what: () => Promise<unknown>, done: string) {
       }
     }
   } catch (err) {
-    toast.error(apiErrorMessage(err))
+    if (!capture(err)) toast.error(apiErrorMessage(err))
   } finally {
     busy.value = false
   }
 }
 
+function startCreate() {
+  clear()
+  creating.value = { email: '', password: '', admin: false }
+}
+
 async function create() {
   const c = creating.value
   if (!c) return
+  clear()
   await act(async () => {
     await createUser(c.email.trim(), c.password, c.admin)
     creating.value = null
@@ -134,6 +151,39 @@ async function handLink(u: AdminUser) {
   }, '')
 }
 
+async function removeTOTP(u: AdminUser) {
+  const ok = await confirm({
+    title: 'Remove the second factor',
+    message: `Remove the authenticator of ${u.email}? They sign in with the password alone until they set one up again.`,
+    confirmText: 'Remove',
+    variant: 'warning',
+  })
+  if (!ok) return
+  await act(() => resetTOTP(u.id), 'Second factor removed')
+}
+
+async function removePasskeys(u: AdminUser) {
+  const ok = await confirm({
+    title: 'Remove the passkeys',
+    message: `Remove every passkey of ${u.email}? They sign in with the password until they enrol one again.`,
+    confirmText: 'Remove',
+    variant: 'warning',
+  })
+  if (!ok) return
+  await act(() => resetPasskeys(u.id), 'Passkeys removed')
+}
+
+async function signOutEverywhere(u: AdminUser) {
+  const ok = await confirm({
+    title: 'Sign out everywhere',
+    message: `End every session of ${u.email}? They have to sign in again on each device.`,
+    confirmText: 'Sign out',
+    variant: 'danger',
+  })
+  if (!ok) return
+  await act(() => revokeSessions(u.id), 'Signed out everywhere')
+}
+
 async function remove(u: AdminUser) {
   const ok = await confirm({
     title: 'Delete account',
@@ -153,17 +203,24 @@ onMounted(load)
 
 <template>
   <PageHeader title="Accounts" :subtitle="`${total} ${total === 1 ? 'account' : 'accounts'}`">
-    <button class="btn btn-primary" @click="creating = { email: '', password: '', admin: false }">
-      Add an account
-    </button>
+    <button class="btn btn-primary" @click="startCreate">Add an account</button>
   </PageHeader>
   <AdminNav />
 
-  <div class="card">
+  <LoadingBlock v-if="!loaded && !loadError" />
+  <div v-else-if="!loaded" class="card">
+    <EmptyState title="The accounts could not be loaded">
+      <p>{{ loadError }}</p>
+      <button class="btn btn-secondary" @click="load">Retry</button>
+    </EmptyState>
+  </div>
+  <div v-else class="card">
     <div class="card-body">
-      <input v-model="search" class="form-input mb-3" placeholder="Search by email" />
-      <p v-if="loading" class="text-sm text-muted">Loading...</p>
-      <table v-else-if="users.length">
+      <div class="search-row mb-3">
+        <input v-model="search" class="form-input" placeholder="Search by email" />
+        <span v-if="loading" class="text-xs text-muted">Updating...</span>
+      </div>
+      <table v-if="users.length">
         <thead>
           <tr>
             <th>Email</th>
@@ -207,11 +264,12 @@ onMounted(load)
     @close="creating = null"
     @submit="create"
   >
-    <FormField label="Email" required>
+    <FormField label="Email" field="email" required>
       <input v-model="creating.email" class="form-input" type="email" required autofocus />
     </FormField>
     <FormField
       label="Password"
+      field="password"
       hint="Optional. Without one, hand the person a reset link afterwards."
     >
       <input v-model="creating.password" class="form-input" type="password" minlength="8" />
@@ -289,21 +347,21 @@ onMounted(load)
       <button
         class="btn btn-sm btn-secondary"
         :disabled="busy || isSelf(editing.user) || !editing.user.totp_enabled"
-        @click="act(() => resetTOTP(editing!.user.id), 'Second factor removed')"
+        @click="removeTOTP(editing.user)"
       >
         Remove 2FA
       </button>
       <button
         class="btn btn-sm btn-secondary"
         :disabled="busy || isSelf(editing.user) || !editing.user.passkeys"
-        @click="act(() => resetPasskeys(editing!.user.id), 'Passkeys removed')"
+        @click="removePasskeys(editing.user)"
       >
         Remove passkeys
       </button>
       <button
         class="btn btn-sm btn-secondary"
         :disabled="busy"
-        @click="act(() => revokeSessions(editing!.user.id), 'Signed out everywhere')"
+        @click="signOutEverywhere(editing.user)"
       >
         Sign out everywhere
       </button>
@@ -334,6 +392,16 @@ onMounted(load)
 <style scoped>
 tr.muted td {
   color: var(--text-muted);
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-row .form-input {
+  flex: 1;
 }
 
 .flags {

@@ -463,6 +463,6 @@ onBeforeUnmount(() => {
 /* The suggestion popup is appended to body, outside this component. */
 .mention-popup {
   position: fixed;
-  z-index: 100;
+  z-index: var(--z-float);
 }
 </style>

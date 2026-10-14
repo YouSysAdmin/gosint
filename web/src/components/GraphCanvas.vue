@@ -18,6 +18,7 @@ import ForceGraph from 'force-graph'
 import { computed, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue'
 import type { GraphEdge, GraphNode } from '@/api/types'
 import { isModalOpen } from '@/components/BaseModal.vue'
+import { FLAG_COLORS } from '@/composables/flags'
 import { ICON_INK, iconImage } from '@/composables/iconImage'
 import { treeLayout } from '@/composables/treeLayout'
 import { useCatalogStore } from '@/stores/catalog'
@@ -103,14 +104,6 @@ const emit = defineEmits<{
 
 // Box selection, switched on by the toolbar or held with S.
 const boxSelect = defineModel<boolean>('boxSelect', { default: false })
-
-const FLAG_COLORS: Record<string, string> = {
-  red: '#ef4444',
-  orange: '#f97316',
-  yellow: '#eab308',
-  green: '#22c55e',
-  blue: '#3b82f6',
-}
 
 const catalog = useCatalogStore()
 const host = ref<HTMLDivElement | null>(null)

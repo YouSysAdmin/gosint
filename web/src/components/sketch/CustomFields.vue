@@ -2,6 +2,7 @@
 // The custom field rows of an entity form. A stored row keeps its name
 // and kind, a new one picks both. Removing a row is the parent's, which
 // may have to clear a stored field.
+// Edits the bound rows in place, the parent passes a reactive ref.
 import { CUSTOM_KINDS, setKind, type CustomKind, type CustomRow } from '@/composables/customFields'
 
 defineProps<{ error?: string }>()

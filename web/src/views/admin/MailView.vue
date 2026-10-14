@@ -6,7 +6,9 @@ import { onMounted, ref } from 'vue'
 import { getMail, saveMail, testMail } from '@/api/admin'
 import { apiErrorMessage } from '@/api/client'
 import type { MailSettings, MailSettingsInput } from '@/api/types'
+import EmptyState from '@/components/EmptyState.vue'
 import FormField from '@/components/FormField.vue'
+import LoadingBlock from '@/components/LoadingBlock.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AdminNav from '@/views/admin/AdminNav.vue'
 import { useNotificationStore } from '@/stores/notification'
@@ -22,6 +24,10 @@ const form = ref({
   starttls: true,
 })
 const busy = ref('')
+// The first load shows the spinner, or a retry when it failed, and the
+// form only once the settings are in it.
+const loaded = ref(false)
+const loadError = ref('')
 
 function fill(m: MailSettings) {
   saved.value = m
@@ -38,8 +44,11 @@ function fill(m: MailSettings) {
 async function load() {
   try {
     fill(await getMail())
+    loaded.value = true
+    loadError.value = ''
   } catch (err) {
     toast.error(apiErrorMessage(err))
+    if (!loaded.value) loadError.value = apiErrorMessage(err)
   }
 }
 
@@ -99,7 +108,14 @@ onMounted(load)
   </PageHeader>
   <AdminNav />
 
-  <form class="card" @submit.prevent="save">
+  <LoadingBlock v-if="!loaded && !loadError" />
+  <div v-else-if="!loaded" class="card">
+    <EmptyState title="The mail settings could not be loaded">
+      <p>{{ loadError }}</p>
+      <button class="btn btn-secondary" @click="load">Retry</button>
+    </EmptyState>
+  </div>
+  <form v-else class="card" @submit.prevent="save">
     <div class="card-body">
       <p class="text-sm text-muted mb-3">
         The relay for password reset and invitation links, built from the public URL. Left empty,

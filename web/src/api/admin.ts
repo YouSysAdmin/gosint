@@ -1,4 +1,5 @@
 import api from './client'
+import { seg } from './path'
 import type {
   AdminUser,
   CustomType,
@@ -27,7 +28,7 @@ export async function listUsers(
 }
 
 export async function getUser(id: string): Promise<{ user: AdminUser; owns: Investigation[] }> {
-  return (await api.get<{ user: AdminUser; owns: Investigation[] }>(`/admin/users/${id}`)).data
+  return (await api.get<{ user: AdminUser; owns: Investigation[] }>(`/admin/users/${seg(id)}`)).data
 }
 
 export async function createUser(
@@ -42,27 +43,29 @@ export async function patchUser(
   id: string,
   p: { admin?: boolean; disabled?: boolean; password?: string },
 ): Promise<AdminUser> {
-  return (await api.patch<{ user: AdminUser }>(`/admin/users/${id}`, p)).data.user
+  return (await api.patch<{ user: AdminUser }>(`/admin/users/${seg(id)}`, p)).data.user
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  await api.delete(`/admin/users/${id}`)
+  await api.delete(`/admin/users/${seg(id)}`)
 }
 
 export async function resetLink(id: string): Promise<{ link: string; emailed: boolean }> {
-  return (await api.post<{ link: string; emailed: boolean }>(`/admin/users/${id}/reset-link`)).data
+  return (await api.post<{ link: string; emailed: boolean }>(`/admin/users/${seg(id)}/reset-link`))
+    .data
 }
 
 export async function resetTOTP(id: string): Promise<void> {
-  await api.delete(`/admin/users/${id}/2fa`)
+  await api.delete(`/admin/users/${seg(id)}/2fa`)
 }
 
 export async function resetPasskeys(id: string): Promise<number> {
-  return (await api.delete<{ removed: number }>(`/admin/users/${id}/passkeys`)).data.removed
+  return (await api.delete<{ removed: number }>(`/admin/users/${seg(id)}/passkeys`)).data.removed
 }
 
 export async function revokeSessions(id: string): Promise<number> {
-  return (await api.post<{ revoked: number }>(`/admin/users/${id}/revoke-sessions`)).data.revoked
+  return (await api.post<{ revoked: number }>(`/admin/users/${seg(id)}/revoke-sessions`)).data
+    .revoked
 }
 
 // Release is whether GitHub has a newer stable release than this build.
@@ -83,7 +86,7 @@ export async function listJobs(): Promise<{ jobs: Job[] }> {
 }
 
 export async function runJob(name: string): Promise<{ jobs: Job[] }> {
-  return (await api.post<{ jobs: Job[] }>(`/admin/jobs/${encodeURIComponent(name)}/run`)).data
+  return (await api.post<{ jobs: Job[] }>(`/admin/jobs/${seg(name)}/run`)).data
 }
 
 // The entity types declared as data.
@@ -95,13 +98,13 @@ export type CustomTypeInput = Omit<CustomType, 'id' | 'created_at'>
 
 export async function saveCustomType(id: string | null, t: CustomTypeInput): Promise<CustomType> {
   const r = id
-    ? await api.put<{ type: CustomType }>(`/admin/types/${id}`, t)
+    ? await api.put<{ type: CustomType }>(`/admin/types/${seg(id)}`, t)
     : await api.post<{ type: CustomType }>('/admin/types', t)
   return r.data.type
 }
 
 export async function deleteCustomType(id: string): Promise<void> {
-  await api.delete(`/admin/types/${id}`)
+  await api.delete(`/admin/types/${seg(id)}`)
 }
 
 // The language models the assistant may use.
@@ -111,13 +114,13 @@ export async function listModels(): Promise<LlmModelAdmin[]> {
 
 export async function saveModel(id: string | null, m: LlmModelInput): Promise<LlmModelAdmin> {
   const r = id
-    ? await api.patch<{ model: LlmModelAdmin }>(`/admin/models/${id}`, m)
+    ? await api.patch<{ model: LlmModelAdmin }>(`/admin/models/${seg(id)}`, m)
     : await api.post<{ model: LlmModelAdmin }>('/admin/models', m)
   return r.data.model
 }
 
 export async function deleteModel(id: string): Promise<void> {
-  await api.delete(`/admin/models/${id}`)
+  await api.delete(`/admin/models/${seg(id)}`)
 }
 
 // The relay the server sends its own mail through.

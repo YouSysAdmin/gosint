@@ -1019,7 +1019,7 @@ onBeforeUnmount(() => {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--text-link, var(--text-secondary));
+  color: var(--accent-fg);
   font-size: 12px;
   cursor: pointer;
   text-decoration: underline;
@@ -1044,7 +1044,7 @@ onBeforeUnmount(() => {
   position: fixed;
   inset: 0;
   /* The dialog layer, above the top bar and the panels. */
-  z-index: 1000;
+  z-index: var(--z-modal);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1353,28 +1353,8 @@ onBeforeUnmount(() => {
   border-color: var(--text-primary);
 }
 
-.segmented {
-  display: inline-flex;
-  border: 1px solid var(--border-button);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
+/* Tighter than the shared control, it sits in a form row. */
 .segmented button {
   padding: 3px 8px;
-  font-size: 12px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  border: 0;
-  cursor: pointer;
-}
-
-.segmented button + button {
-  border-left: 1px solid var(--border-button);
-}
-
-.segmented button.active {
-  background: var(--bg-active);
-  color: var(--text-primary);
 }
 </style>

@@ -280,6 +280,27 @@
 
   --transition: 150ms ease;
   --transition-slow: 250ms ease;
+
+  /* The flag an entity can carry, the same hue in both themes. The
+     canvas paints with the hex from composables/flags.ts, which holds
+     these same values. */
+  --flag-red: #ef4444;
+  --flag-orange: #f97316;
+  --flag-yellow: #eab308;
+  --flag-green: #22c55e;
+  --flag-blue: #3b82f6;
+
+  /* The layer scale. A local tweak inside its own stacking context
+     (a close button over a panel, the canvas overlay) keeps a small
+     literal, everything that floats over the page takes a step here. */
+  --z-raised: 10;
+  --z-panel: 15;
+  --z-popover: 20;
+  --z-topbar: 30;
+  --z-float: 50;
+  --z-modal: 1000;
+  --z-palette: 1500;
+  --z-toast: 2000;
 }
 
 /* --------- Reset --------- */
@@ -677,8 +698,7 @@ option::checkmark {
 }
 
 /* Stacked cards space themselves. A grid uses gap, so it opts out. */
-.card + .card,
-.stats-grid + .card {
+.card + .card {
   margin-top: 24px;
 }
 
@@ -860,69 +880,6 @@ tbody tr:hover td {
   border-color: color-mix(in srgb, var(--danger-500) 22%, transparent);
 }
 
-/* --------- Stats --------- */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-/* Flat, and no lift on hover - a dashboard tile is not a control,
-   and a transform on hover implies it can be clicked. */
-.stat-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  transition:
-    background var(--transition-slow),
-    border-color var(--transition-slow);
-}
-
-.stat-card .stat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.stat-card .stat-label {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.stat-card .stat-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
-}
-
-.stat-card .stat-sub {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
-
-/* A STAT ICON IS DECORATION AND IS NOT COLOURED, and there are no
-   colour variants of it. Colour means STATUS: a stat card already
-   says "Failed" in words with the number beside it, so a tint under
-   its glyph repeats the label in a language the badges need for
-   themselves. */
-.stat-card .stat-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius);
-  flex-shrink: 0;
-  background: var(--bg-tertiary);
-  color: var(--text-tertiary);
-}
-
 /* --------- Page Headers --------- */
 .page-header {
   display: flex;
@@ -986,38 +943,11 @@ tbody tr:hover td {
   justify-content: center;
 }
 
-/* The footer of a list that pages by cursor. */
-.load-more {
-  display: flex;
-  justify-content: center;
-  padding: 14px 24px;
-  border-top: 1px solid var(--border-primary);
-}
-
 /* Monospace, for a value that is read character by character: a PEM, a
    template body, a DNS record. */
 .code-font {
   font-family: var(--font-mono);
   font-size: 13px;
-}
-
-/* --------- Pagination --------- */
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border-primary);
-}
-
-.pagination-info {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.pagination-buttons {
-  display: flex;
-  gap: 8px;
 }
 
 /* --------- Modal --------- */
@@ -1028,7 +958,7 @@ tbody tr:hover td {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
   padding: 20px;
   backdrop-filter: blur(2px);
   animation: fadeIn 150ms ease;
@@ -1147,7 +1077,7 @@ tbody tr:hover td {
   position: fixed;
   top: 20px;
   right: 20px;
-  z-index: 2000;
+  z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1212,116 +1142,6 @@ tbody tr:hover td {
   to {
     transform: translateX(0);
     opacity: 1;
-  }
-}
-
-/* --------- Two-pane reader --------- */
-/* A list of messages beside the one being read, shared by the inbound
-   log and the sandbox.
-   The page supplies the definite height and the split supplies the
-   floor. Both are needed: without the height the split has nothing to
-   fill, so flex:1 sizes it to its content and the page scrolls even
-   where everything would have fitted. Without the floor, whatever sits
-   above it comes out of the split's share and can crush it.
-   52px is the topbar, the gutters are .main-content's own padding, and
-   dvh so a mobile browser's collapsing address bar does not leave the
-   split hanging below the fold. */
-.reader-page {
-  display: flex;
-  flex-direction: column;
-  height: calc(100dvh - 52px - 2 * var(--gutter));
-}
-
-.reader-split {
-  display: grid;
-  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
-  /* Takes the room the rows above leave, but never less than this -
-     below about 26rem a two-pane reader stops being usable, and it is
-     better for the page to scroll than for the message to be read
-     through a slot. */
-  flex: 1;
-  min-height: 26rem;
-  padding: 0;
-  overflow: hidden;
-}
-
-.list-pane {
-  min-height: 0;
-  overflow-y: auto;
-  border-right: 1px solid var(--border-primary);
-}
-
-/* Stays put while the list moves under it. */
-.list-filter {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 8px 12px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-primary);
-}
-
-.message-search-bar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-/* A slotted control takes the room, the toggle keeps its own width. */
-.message-search-bar > .form-select {
-  flex: 1;
-  min-width: 0;
-}
-
-.message-search-toggle {
-  flex-shrink: 0;
-}
-
-.message-search-count {
-  display: inline-block;
-  min-width: 18px;
-  margin-left: 6px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: var(--primary-600);
-  color: var(--text-on-primary);
-  font-size: 11px;
-  line-height: 18px;
-  text-align: center;
-}
-
-.message-search-fields {
-  display: grid;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.list-more {
-  padding: 12px;
-  text-align: center;
-}
-
-.reader-pane {
-  min-height: 0;
-  /* NOT scrollable: the reader manages its own rows and hands the
-     scrolling to whichever one holds the body. */
-  overflow: hidden;
-}
-
-/* 1024px is where the layout already collapses its sidebar, so it is
-   where two panes stop fitting side by side too. Stacked, they cannot
-   both have the screen: the list takes a fixed slice off the top and the
-   reader keeps the rest, which is still one scrollbar each. */
-@media (max-width: 1024px) {
-  .reader-split {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 14rem minmax(0, 1fr);
-  }
-
-  .list-pane {
-    border-right: none;
-    border-bottom: 1px solid var(--border-primary);
   }
 }
 
@@ -1560,28 +1380,71 @@ input[type='checkbox']:checked::before {
   }
 }
 
-/* --------- List page furniture --------- */
-/* The controls above a list, and the page controls below it. */
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-}
-
-/* A sentence under a card heading saying what the card is for. */
+/* A sentence under a page or card heading saying what it is for. */
 .header-sub {
   color: var(--text-muted);
   font-size: 13px;
   margin-top: 4px;
+}
+
+/* --------- Menus --------- */
+/* One row of a dropdown or a context menu, wherever the menu itself is
+   drawn (MenuButton, UserMenu, GraphMenu, the sketch switcher). The
+   menu owns its surface and placement, the rows look the same in all. */
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.menu-item.danger {
+  color: var(--danger-fg);
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border-primary);
+}
+
+/* --------- Segmented control --------- */
+/* A row of joined buttons where exactly one is active: the view
+   switch, cards or a list, a shape. */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border-button);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.segmented button {
+  padding: 4px 10px;
+  font-size: 12px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 0;
+  cursor: pointer;
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--border-button);
+}
+
+.segmented button.active {
+  background: var(--bg-active);
+  color: var(--text-primary);
 }
 
 /* --------- Utilities --------- */
@@ -1811,59 +1674,6 @@ input[type='checkbox']:checked::before {
   color: var(--primary-300);
 }
 
-/* Right-aligned row action cluster --- keeps icon buttons from wrapping oddly. */
-.table-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  justify-content: flex-end;
-}
-
-/* The row-actions popover (components/ActionMenu.vue). One recipe here
-   rather than a scoped copy per table, the same reason every shared
-   class lives in this file. Fixed, because it is teleported out of the
-   table wrapper - see the component for why. */
-.action-menu-trigger {
-  display: inline-flex;
-}
-
-.action-menu-trigger .btn svg {
-  margin-left: 4px;
-}
-
-.action-menu {
-  position: fixed;
-  z-index: 50;
-  min-width: 180px;
-  padding: 4px;
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-lg);
-  background: var(--bg-popover);
-  box-shadow: var(--shadow-lg);
-}
-
-.action-menu-item {
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
-  border: 0;
-  border-radius: var(--radius);
-  background: none;
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.action-menu-item:hover {
-  background: var(--bg-tertiary);
-}
-
-.action-menu-item-danger {
-  color: var(--danger-600);
-}
-
 /* A row whose whole area opens what it names. It carries the pointer
    AND the hover, which is why it exists as one class: a row with only
    the cursor sits dead under it. */
@@ -1925,48 +1735,3 @@ input[type='checkbox']:checked::before {
    ::picker(select)::-webkit-scrollbar block: chaining two
    pseudo-elements is refused by Lightning CSS, and every browser new
    enough for the picker honours scrollbar-color anyway. */
-
-/* The signed-out pages: sign in, register, forgot, reset, confirm.
-   AuthPage.vue holds the shell - what follows is what goes INSIDE its
-   card, so it has to be here rather than scoped to that component: a
-   scoped rule reaches a child's root element and nothing deeper, and
-   these are the slotted body. */
-.auth-note {
-  margin: 0 0 14px;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
-/* The quiet line under a form - "Forgot your password?", "No account
-   yet?". Centred, because the button above it is full width. */
-.auth-aside {
-  margin: 14px 0 0;
-  text-align: center;
-  font-size: 13px;
-}
-
-/* "or", ruled off on both sides, between the password form and the
-   passkey and SSO buttons. */
-.auth-or {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 18px 0;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.auth-or::before,
-.auth-or::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border-primary);
-}
-
-/* Tighter than a settings page: an auth card is two fields read in one
-   glance, where a form full of them wants the air. */
-.auth-form .form-group {
-  margin-bottom: 14px;
-}

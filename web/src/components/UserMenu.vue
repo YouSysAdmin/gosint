@@ -104,9 +104,9 @@ onBeforeUnmount(() => {
           </button>
         </span>
       </div>
-      <div class="sep"></div>
-      <router-link class="item" to="/profile" @click="open = false">Profile</router-link>
-      <button class="item" @click="signOut()">Sign out</button>
+      <div class="menu-sep"></div>
+      <router-link class="menu-item" to="/profile" @click="open = false">Profile</router-link>
+      <button class="menu-item" @click="signOut()">Sign out</button>
     </div>
   </div>
 </template>
@@ -159,7 +159,7 @@ onBeforeUnmount(() => {
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  z-index: 60;
+  z-index: var(--z-float);
   width: 240px;
   padding: 6px;
   display: flex;
@@ -211,28 +211,5 @@ onBeforeUnmount(() => {
 .mode.on {
   background: var(--bg-active);
   color: var(--text-primary);
-}
-
-.sep {
-  height: 1px;
-  margin: 4px 0;
-  background: var(--border-primary);
-}
-
-.item {
-  padding: 7px 10px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-primary);
-  text-align: left;
-  text-decoration: none;
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.item:hover {
-  background: var(--bg-hover);
 }
 </style>

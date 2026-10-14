@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // A YAML transform: edited as text, saved, then tried on one value.
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { apiErrorMessage } from '@/api/client'
 import {
   deleteTemplate,
@@ -10,7 +10,9 @@ import {
   testTemplate,
   type TemplateTest,
 } from '@/api/catalog'
+import EmptyState from '@/components/EmptyState.vue'
 import FormField from '@/components/FormField.vue'
+import LoadingBlock from '@/components/LoadingBlock.vue'
 import YamlEditor from '@/components/YamlEditor.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { useConfirm } from '@/composables/useConfirm'
@@ -66,6 +68,23 @@ const ioInput = ref('')
 const ioOutput = ref('')
 const generating = ref(false)
 const saving = ref(false)
+// An existing template shows the spinner until it is read, never the
+// starter in its place, and a link back when the read failed.
+const loaded = ref(false)
+const loadError = ref('')
+
+// What was last read or saved, so leaving with an edit asks first.
+const savedSource = ref('')
+const savedPublic = ref(false)
+const dirty = computed(
+  () =>
+    loaded.value && (source.value !== savedSource.value || isPublic.value !== savedPublic.value),
+)
+
+function markSaved() {
+  savedSource.value = source.value
+  savedPublic.value = isPublic.value
+}
 
 // fieldsOf lists a type's field names, the primary one first.
 function fieldsOf(type: string): string[] {
@@ -133,6 +152,7 @@ async function save() {
   problem.value = ''
   try {
     const t = await saveTemplate(id.value, source.value, isPublic.value)
+    markSaved()
     toast.success(`${t.name} saved`)
     if (!id.value) await router.replace(`/templates/${t.id}`)
   } catch (err) {
@@ -163,6 +183,7 @@ async function remove() {
     return
   try {
     await deleteTemplate(id.value)
+    markSaved()
     await router.push('/transforms')
   } catch (err) {
     toast.error(apiErrorMessage(err))
@@ -182,6 +203,8 @@ onMounted(async () => {
       '',
       fieldsOf(t.output),
     )
+    markSaved()
+    loaded.value = true
     return
   }
   try {
@@ -189,109 +212,147 @@ onMounted(async () => {
     source.value = t.source
     isPublic.value = t.is_public
     owner.value = t.owner_id
+    markSaved()
+    loaded.value = true
   } catch (err) {
-    toast.error(apiErrorMessage(err))
+    loadError.value = apiErrorMessage(err)
   }
+})
+
+// The browser asks before closing the tab while an edit is unsaved.
+function onUnload(ev: BeforeUnloadEvent) {
+  ev.preventDefault()
+}
+
+watch(dirty, (d) => {
+  if (d) window.addEventListener('beforeunload', onUnload)
+  else window.removeEventListener('beforeunload', onUnload)
+})
+
+onBeforeUnmount(() => window.removeEventListener('beforeunload', onUnload))
+
+onBeforeRouteLeave(async () => {
+  if (!dirty.value) return true
+
+  return confirm({
+    title: 'Leave without saving?',
+    message: 'The changes to this transform template are not saved.',
+    confirmText: 'Leave',
+    variant: 'warning',
+  })
 })
 </script>
 
 <template>
-  <PageHeader :title="id ? 'Transform template' : 'New transform'">
-    <button v-if="id && mine" class="btn btn-danger" @click="remove">Delete</button>
-    <button v-if="mine" class="btn btn-primary" :disabled="saving" @click="save">Save</button>
-  </PageHeader>
-
-  <div v-if="problem" class="notice notice-danger mb-4">{{ problem }}</div>
-
-  <div v-if="mine" class="card mb-4">
-    <div class="card-header"><h3>Draft it with the model</h3></div>
-    <div class="card-body">
-      <div class="form-row">
-        <FormField label="What should it do" class="flex-1">
-          <input
-            v-model="ask"
-            class="form-input"
-            placeholder="Look an IP up on ip-api.com and keep its city, country and ISP"
-            @keydown.enter.prevent="generate"
-          />
-        </FormField>
-        <FormField v-if="models.length > 1" label="Model">
-          <select
-            class="form-select"
-            :value="model?.id"
-            @change="pick(($event.target as HTMLSelectElement).value)"
-          >
-            <option v-for="m in models" :key="m.id" :value="m.id">{{ m.name }}</option>
-          </select>
-        </FormField>
-        <button
-          class="btn btn-secondary self-end"
-          :disabled="generating || !ask.trim()"
-          @click="generate"
-        >
-          {{ generating ? 'Drafting...' : 'Draft' }}
-        </button>
-      </div>
-      <p class="text-sm text-muted">
-        The draft replaces the editor below and follows its Input and Output. Read it before saving,
-        a model guesses field names.
-      </p>
-    </div>
+  <LoadingBlock v-if="!loaded && !loadError" />
+  <div v-else-if="!loaded" class="card">
+    <EmptyState title="The transform template could not be opened">
+      <p>{{ loadError }}</p>
+      <router-link class="btn btn-secondary" to="/transforms">Back to transforms</router-link>
+    </EmptyState>
   </div>
+  <template v-else>
+    <PageHeader :title="id ? 'Transform template' : 'New transform'">
+      <button v-if="id && mine" class="btn btn-danger" @click="remove">Delete</button>
+      <button v-if="mine" class="btn btn-primary" :disabled="saving" @click="save">Save</button>
+    </PageHeader>
 
-  <div class="split">
-    <div class="card">
-      <div class="card-header io">
-        <FormField label="Input">
-          <select v-model="ioInput" class="form-select" :disabled="!mine">
-            <option value="" disabled>Pick a type</option>
-            <option v-for="t in catalog.types" :key="t.name" :value="t.name">{{ t.title }}</option>
-          </select>
-        </FormField>
-        <span class="arrow" aria-hidden="true">&rarr;</span>
-        <FormField label="Output">
-          <select v-model="ioOutput" class="form-select" :disabled="!mine">
-            <option value="" disabled>Pick a type</option>
-            <option v-for="t in catalog.types" :key="t.name" :value="t.name">{{ t.title }}</option>
-          </select>
-        </FormField>
-        <p class="text-xs text-muted hint">
-          A pick rewrites the YAML's input and output, with the type's fields listed in a comment.
+    <div v-if="problem" class="notice notice-danger mb-4">{{ problem }}</div>
+
+    <div v-if="mine" class="card mb-4">
+      <div class="card-header"><h3>Draft it with the model</h3></div>
+      <div class="card-body">
+        <div class="form-row">
+          <FormField label="What should it do" class="flex-1">
+            <input
+              v-model="ask"
+              class="form-input"
+              placeholder="Look an IP up on ip-api.com and keep its city, country and ISP"
+              @keydown.enter.prevent="generate"
+            />
+          </FormField>
+          <FormField v-if="models.length > 1" label="Model">
+            <select
+              class="form-select"
+              :value="model?.id"
+              @change="pick(($event.target as HTMLSelectElement).value)"
+            >
+              <option v-for="m in models" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
+          </FormField>
+          <button
+            class="btn btn-secondary self-end"
+            :disabled="generating || !ask.trim()"
+            @click="generate"
+          >
+            {{ generating ? 'Drafting...' : 'Draft' }}
+          </button>
+        </div>
+        <p class="text-sm text-muted">
+          The draft replaces the editor below and follows its Input and Output. Read it before
+          saving, a model guesses field names.
         </p>
       </div>
-      <div class="card-body">
-        <YamlEditor v-model="source" :readonly="!mine" />
-        <label v-if="mine" class="checkbox-label mt-3">
-          <input v-model="isPublic" type="checkbox" /> Share with every account (one reading secrets
-          runs for you only)
-        </label>
-      </div>
     </div>
-    <div class="card">
-      <div class="card-header"><h3>Try it</h3></div>
-      <div class="card-body">
-        <p v-if="!id" class="text-muted">Save the template first.</p>
-        <form v-else class="flex gap-2 mb-3" @submit.prevent="test">
-          <FormField label="Input value" class="flex-1">
-            <input v-model="sample" class="form-input" required />
+
+    <div class="split">
+      <div class="card">
+        <div class="card-header io">
+          <FormField label="Input">
+            <select v-model="ioInput" class="form-select" :disabled="!mine">
+              <option value="" disabled>Pick a type</option>
+              <option v-for="t in catalog.types" :key="t.name" :value="t.name">
+                {{ t.title }}
+              </option>
+            </select>
           </FormField>
-          <button class="btn btn-secondary">Run</button>
-        </form>
-        <template v-if="tested">
-          <p v-if="tested.error" class="text-danger">{{ tested.error }}</p>
-          <div v-for="(o, i) in tested.outputs" :key="i" class="mb-2">
-            <div class="fw-medium">{{ o.label || '(no label)' }}</div>
-            <div v-if="o.error" class="text-danger text-sm">{{ o.error }}</div>
-            <pre class="code-block">{{ JSON.stringify(o.properties, null, 2) }}</pre>
-          </div>
-          <details v-if="tested.answer">
-            <summary class="text-sm">Raw answer, status {{ tested.answer.status_code }}</summary>
-            <pre class="code-block">{{ tested.answer.body.slice(0, 4000) }}</pre>
-          </details>
-        </template>
+          <span class="arrow" aria-hidden="true">&rarr;</span>
+          <FormField label="Output">
+            <select v-model="ioOutput" class="form-select" :disabled="!mine">
+              <option value="" disabled>Pick a type</option>
+              <option v-for="t in catalog.types" :key="t.name" :value="t.name">
+                {{ t.title }}
+              </option>
+            </select>
+          </FormField>
+          <p class="text-xs text-muted hint">
+            A pick rewrites the YAML's input and output, with the type's fields listed in a comment.
+          </p>
+        </div>
+        <div class="card-body">
+          <YamlEditor v-model="source" :readonly="!mine" />
+          <label v-if="mine" class="checkbox-label mt-3">
+            <input v-model="isPublic" type="checkbox" /> Share with every account (one reading
+            secrets runs for you only)
+          </label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Try it</h3></div>
+        <div class="card-body">
+          <p v-if="!id" class="text-muted">Save the template first.</p>
+          <form v-else class="flex gap-2 mb-3" @submit.prevent="test">
+            <FormField label="Input value" class="flex-1">
+              <input v-model="sample" class="form-input" required />
+            </FormField>
+            <button class="btn btn-secondary">Run</button>
+          </form>
+          <template v-if="tested">
+            <p v-if="tested.error" class="text-danger">{{ tested.error }}</p>
+            <div v-for="(o, i) in tested.outputs" :key="i" class="mb-2">
+              <div class="fw-medium">{{ o.label || '(no label)' }}</div>
+              <div v-if="o.error" class="text-danger text-sm">{{ o.error }}</div>
+              <pre class="code-block">{{ JSON.stringify(o.properties, null, 2) }}</pre>
+            </div>
+            <details v-if="tested.answer">
+              <summary class="text-sm">Raw answer, status {{ tested.answer.status_code }}</summary>
+              <pre class="code-block">{{ tested.answer.body.slice(0, 4000) }}</pre>
+            </details>
+          </template>
+        </div>
       </div>
     </div>
-  </div>
+  </template>
 </template>
 
 <style scoped>

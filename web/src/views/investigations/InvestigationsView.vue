@@ -236,31 +236,6 @@ onMounted(load)
   color: var(--text-primary);
 }
 
-.segmented {
-  display: inline-flex;
-  border: 1px solid var(--border-button);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.segmented button {
-  padding: 4px 10px;
-  font-size: 12px;
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  border: 0;
-  cursor: pointer;
-}
-
-.segmented button + button {
-  border-left: 1px solid var(--border-button);
-}
-
-.segmented button.active {
-  background: var(--bg-active);
-  color: var(--text-primary);
-}
-
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -322,6 +297,6 @@ onMounted(load)
 }
 
 .status-dot.active {
-  background: #22c55e;
+  background: var(--success-500);
 }
 </style>

@@ -1,4 +1,5 @@
 import api, { readBlobError } from './client'
+import { seg } from './path'
 import { multipart, type Download } from './sketches'
 import { fileNameOf } from '@/composables/download'
 import type {
@@ -50,7 +51,7 @@ export async function putKey(name: string, value: string): Promise<VaultKey> {
 }
 
 export async function deleteKey(id: string): Promise<void> {
-  await api.delete(`/secrets/${id}`)
+  await api.delete(`/secrets/${seg(id)}`)
 }
 
 export async function listTemplates(): Promise<TransformTemplate[]> {
@@ -58,20 +59,20 @@ export async function listTemplates(): Promise<TransformTemplate[]> {
 }
 
 export async function getTemplate(id: string): Promise<TransformTemplate> {
-  return (await api.get<{ template: TransformTemplate }>(`/transform-templates/${id}`)).data
+  return (await api.get<{ template: TransformTemplate }>(`/transform-templates/${seg(id)}`)).data
     .template
 }
 
 export async function saveTemplate(id: string | null, source: string, isPublic: boolean) {
   const body = { source, is_public: isPublic }
   const res = id
-    ? await api.put<{ template: TransformTemplate }>(`/transform-templates/${id}`, body)
+    ? await api.put<{ template: TransformTemplate }>(`/transform-templates/${seg(id)}`, body)
     : await api.post<{ template: TransformTemplate }>('/transform-templates', body)
   return res.data.template
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
-  await api.delete(`/transform-templates/${id}`)
+  await api.delete(`/transform-templates/${seg(id)}`)
 }
 
 export interface TemplateTest {
@@ -81,7 +82,7 @@ export interface TemplateTest {
 }
 
 export async function testTemplate(id: string, value: string): Promise<TemplateTest> {
-  return (await api.post<TemplateTest>(`/transform-templates/${id}/test`, { value })).data
+  return (await api.post<TemplateTest>(`/transform-templates/${seg(id)}/test`, { value })).data
 }
 
 export async function listFlows(type?: string): Promise<Flow[]> {
@@ -89,7 +90,7 @@ export async function listFlows(type?: string): Promise<Flow[]> {
 }
 
 export async function getFlow(id: string): Promise<Flow> {
-  return (await api.get<{ flow: Flow }>(`/flows/${id}`)).data.flow
+  return (await api.get<{ flow: Flow }>(`/flows/${seg(id)}`)).data.flow
 }
 
 export async function saveFlow(
@@ -100,13 +101,13 @@ export async function saveFlow(
 ) {
   const body = { name, description, definition }
   const res = id
-    ? await api.put<{ flow: Flow }>(`/flows/${id}`, body)
+    ? await api.put<{ flow: Flow }>(`/flows/${seg(id)}`, body)
     : await api.post<{ flow: Flow }>('/flows', body)
   return res.data.flow
 }
 
 export async function deleteFlow(id: string): Promise<void> {
-  await api.delete(`/flows/${id}`)
+  await api.delete(`/flows/${seg(id)}`)
 }
 
 export async function checkFlow(definition: FlowDefinition) {
@@ -129,7 +130,7 @@ async function fetchFile(url: string, fallback: string): Promise<Download> {
 }
 
 export function exportFlow(id: string): Promise<Download> {
-  return fetchFile(`/flows/${id}/export`, 'flow.json')
+  return fetchFile(`/flows/${seg(id)}/export`, 'flow.json')
 }
 
 export function exportFlows(): Promise<Download> {
@@ -148,7 +149,7 @@ export async function importFlows(file: File): Promise<FileImport> {
 }
 
 export function exportTemplate(id: string): Promise<Download> {
-  return fetchFile(`/transform-templates/${id}/export`, 'template.yaml')
+  return fetchFile(`/transform-templates/${seg(id)}/export`, 'template.yaml')
 }
 
 export function exportTemplates(): Promise<Download> {
@@ -187,6 +188,7 @@ export async function searchEntities(params: {
 // sketches by a piece of the label, the first ones by label when q is
 // empty. The analysis editor's mentions ask it as the person types.
 export async function investigationEntities(id: string, q: string): Promise<SearchHit[]> {
-  return (await api.get<{ hits: SearchHit[] }>(`/investigations/${id}/entities`, { params: { q } }))
-    .data.hits
+  return (
+    await api.get<{ hits: SearchHit[] }>(`/investigations/${seg(id)}/entities`, { params: { q } })
+  ).data.hits
 }

@@ -7,7 +7,9 @@ import { computed, onMounted, ref } from 'vue'
 import { getFileStore, saveFileStore } from '@/api/admin'
 import { apiErrorMessage } from '@/api/client'
 import type { FileStore, FileStoreInput } from '@/api/types'
+import EmptyState from '@/components/EmptyState.vue'
 import FormField from '@/components/FormField.vue'
+import LoadingBlock from '@/components/LoadingBlock.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import AdminNav from '@/views/admin/AdminNav.vue'
 import { useConfirm } from '@/composables/useConfirm'
@@ -32,6 +34,10 @@ const form = ref<FileStoreInput & { secret_key: string }>({
   },
 })
 const busy = ref(false)
+// The first load shows the spinner, or a retry when it failed, and the
+// form only once the settings are in it.
+const loaded = ref(false)
+const loadError = ref('')
 
 function fill(f: FileStore) {
   saved.value = f
@@ -71,8 +77,11 @@ const moved = computed(() => {
 async function load() {
   try {
     fill(await getFileStore())
+    loaded.value = true
+    loadError.value = ''
   } catch (err) {
     toast.error(apiErrorMessage(err))
+    if (!loaded.value) loadError.value = apiErrorMessage(err)
   }
 }
 
@@ -116,7 +125,14 @@ onMounted(load)
   <PageHeader title="Files" />
   <AdminNav />
 
-  <form class="card" @submit.prevent="save">
+  <LoadingBlock v-if="!loaded && !loadError" />
+  <div v-else-if="!loaded" class="card">
+    <EmptyState title="The file store settings could not be loaded">
+      <p>{{ loadError }}</p>
+      <button class="btn btn-secondary" @click="load">Retry</button>
+    </EmptyState>
+  </div>
+  <form v-else class="card" @submit.prevent="save">
     <div class="card-body">
       <p class="text-sm text-muted mb-3">
         Files attached to entities are sealed before they are stored, wherever that is. The store is
