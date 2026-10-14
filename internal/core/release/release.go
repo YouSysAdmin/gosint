@@ -57,9 +57,10 @@ type Checker struct {
 	Agent  string
 	Every  time.Duration
 
-	mu     sync.Mutex
-	status Status
-	next   time.Time
+	mu       sync.Mutex
+	status   Status
+	next     time.Time
+	inflight bool
 }
 
 // release is the part of GitHub's answer read.
@@ -71,32 +72,40 @@ type release struct {
 }
 
 // Status answers the last check, checking again once it is due. A
-// failure keeps the previous answer.
+// failure keeps the previous answer. One request is out at a time, a
+// caller arriving while it is on its way gets the answer kept so far
+// instead of waiting on GitHub.
 func (c *Checker) Status(ctx context.Context) Status {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if _, ok := parse(c.Current); !ok {
 		return Status{Current: c.Current}
 	}
 
+	c.mu.Lock()
 	now := time.Now().UTC()
-	if now.Before(c.next) {
-		return c.status
+	if now.Before(c.next) || c.inflight {
+		st := c.kept()
+		c.mu.Unlock()
+
+		return st
 	}
+
+	c.inflight = true
+	c.mu.Unlock()
 
 	// A closed tab must not cut the check every other admin waits on.
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), requestTimeout)
 	defer cancel()
 
 	rel, err := c.fetch(ctx)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.inflight = false
 	if err != nil {
 		c.next = now.Add(retryAfter)
-		if c.status.Current == "" {
-			c.status = Status{Current: c.Current}
-		}
 
-		return c.status
+		return c.kept()
 	}
 
 	c.status = Status{Current: c.Current, CheckedAt: now}
@@ -112,6 +121,16 @@ func (c *Checker) Status(ctx context.Context) Status {
 	}
 
 	c.next = now.Add(every)
+
+	return c.status
+}
+
+// kept is the answer so far, the running version alone before the
+// first one. Called under mu.
+func (c *Checker) kept() Status {
+	if c.status.Current == "" {
+		return Status{Current: c.Current}
+	}
 
 	return c.status
 }

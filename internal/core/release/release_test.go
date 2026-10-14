@@ -6,8 +6,10 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/yousysadmin/gosint/internal/core/release"
 )
@@ -76,6 +78,92 @@ func TestAPreReleaseIsNotOffered(t *testing.T) {
 
 	if st := c.Status(context.Background()); st.Available {
 		t.Errorf("a pre-release was offered: %+v", st)
+	}
+}
+
+// GitHub being down keeps the last answer, and is not asked again at
+// once.
+func TestAFailedCheckKeepsTheLastAnswer(t *testing.T) {
+	var calls atomic.Int32
+
+	var down atomic.Bool
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		if down.Load() {
+			w.WriteHeader(http.StatusBadGateway)
+
+			return
+		}
+
+		_, _ = w.Write([]byte(`{"tag_name":"v1.3.0"}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := &release.Checker{Current: "1.2.0", URL: srv.URL, Every: time.Nanosecond}
+	if st := c.Status(context.Background()); !st.Available {
+		t.Fatalf("status = %+v", st)
+	}
+
+	down.Store(true)
+
+	if st := c.Status(context.Background()); !st.Available || st.Latest != "1.3.0" {
+		t.Fatalf("a failure dropped the answer: %+v", st)
+	}
+
+	c.Status(context.Background())
+
+	if n := calls.Load(); n != 2 {
+		t.Errorf("github asked %d times, want 2: a failure is retried after an hour", n)
+	}
+}
+
+// A check on its way is not run twice: a second caller gets the answer
+// kept so far at once instead of waiting on GitHub.
+func TestOneRequestAtATime(t *testing.T) {
+	var calls atomic.Int32
+
+	entered := make(chan struct{}, 2)
+	proceed := make(chan struct{})
+
+	var once sync.Once
+	t.Cleanup(func() { once.Do(func() { close(proceed) }) })
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		entered <- struct{}{}
+		<-proceed
+		_, _ = w.Write([]byte(`{"tag_name":"v1.3.0"}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := &release.Checker{Current: "1.2.0", URL: srv.URL}
+
+	first := make(chan release.Status, 1)
+	go func() { first <- c.Status(context.Background()) }()
+
+	<-entered
+
+	second := make(chan release.Status, 1)
+	go func() { second <- c.Status(context.Background()) }()
+
+	select {
+	case st := <-second:
+		if st.Available || st.Current != "1.2.0" {
+			t.Fatalf("second status = %+v, want the version alone", st)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the second caller waited on the first's request")
+	}
+
+	once.Do(func() { close(proceed) })
+
+	if st := <-first; !st.Available {
+		t.Fatalf("first status = %+v", st)
+	}
+
+	if n := calls.Load(); n != 1 {
+		t.Errorf("github asked %d times, want 1", n)
 	}
 }
 
