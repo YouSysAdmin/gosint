@@ -258,6 +258,11 @@ watch(grouping, (on) => storageSet('gosint_groups', on ? 'on' : 'off'))
 const remoteImagesKey = `gosint.remoteImages.${id.value}`
 const remoteImages = ref(storageGet(remoteImagesKey) === 'on')
 watch(remoteImages, (on) => storageSet(remoteImagesKey, on ? 'on' : 'off'))
+const remoteImagesTitle = computed(() =>
+  remoteImages.value
+    ? 'Pictures from other sites are loaded, click to stop'
+    : 'Load remote images: pictures hosted on other sites',
+)
 
 // groupMenu is the right click on a collection: its members become the
 // selection and the selection menu opens on them.
@@ -1065,6 +1070,7 @@ onBeforeUnmount(() => {
           v-model="search"
           class="form-input"
           placeholder="Find an entity"
+          aria-label="Find an entity"
           @keydown.enter.prevent="matches.length && focus(matches[0].id)"
         />
         <!-- With the entities panel open the panel's list shows the hits. -->
@@ -1233,13 +1239,18 @@ onBeforeUnmount(() => {
           @link-drag="linkDrag"
         />
         <div v-if="view === 'graph'" class="tools">
-          <button title="Zoom in" @click="canvas?.zoomBy(1.4)"><ZoomIn :size="16" /></button>
-          <button title="Zoom out" @click="canvas?.zoomBy(1 / 1.4)">
+          <button title="Zoom in" aria-label="Zoom in" @click="canvas?.zoomBy(1.4)">
+            <ZoomIn :size="16" />
+          </button>
+          <button title="Zoom out" aria-label="Zoom out" @click="canvas?.zoomBy(1 / 1.4)">
             <ZoomOut :size="16" />
           </button>
-          <button title="Fit everything" @click="fit"><Maximize :size="16" /></button>
+          <button title="Fit everything" aria-label="Fit everything" @click="fit">
+            <Maximize :size="16" />
+          </button>
           <button
             title="Zoom to the selection"
+            aria-label="Zoom to the selection"
             :disabled="selected.size < 1"
             @click="canvas?.zoomToSelection(selected)"
           >
@@ -1248,6 +1259,7 @@ onBeforeUnmount(() => {
           <span class="sep"></span>
           <button
             title="Select with a box (hold S)"
+            aria-label="Select with a box (hold S)"
             :class="{ on: boxSelect }"
             @click="boxSelect = !boxSelect"
           >
@@ -1255,6 +1267,7 @@ onBeforeUnmount(() => {
           </button>
           <button
             title="Hide entities by a rule"
+            aria-label="Hide entities by a rule"
             data-filters-toggle
             :class="{ on: rules.length > 0 }"
             @click="showFilters = !showFilters"
@@ -1264,17 +1277,15 @@ onBeforeUnmount(() => {
           </button>
           <button
             title="Fold 12 or more entities of one kind under one parent into a collection"
+            aria-label="Fold 12 or more entities of one kind under one parent into a collection"
             :class="{ on: grouping }"
             @click="grouping = !grouping"
           >
             <Layers :size="16" />
           </button>
           <button
-            :title="
-              remoteImages
-                ? 'Pictures from other sites are loaded, click to stop'
-                : 'Load remote images: pictures hosted on other sites'
-            "
+            :title="remoteImagesTitle"
+            :aria-label="remoteImagesTitle"
             :class="{ on: remoteImages }"
             @click="remoteImages = !remoteImages"
           >
@@ -1284,6 +1295,7 @@ onBeforeUnmount(() => {
             <span class="sep"></span>
             <button
               :title="history.undo ? 'Undo: ' + history.undo : 'Nothing to undo'"
+              :aria-label="history.undo ? 'Undo: ' + history.undo : 'Nothing to undo'"
               :disabled="!history.undo"
               @click="revert(true)"
             >
@@ -1291,6 +1303,7 @@ onBeforeUnmount(() => {
             </button>
             <button
               :title="history.redo ? 'Redo: ' + history.redo : 'Nothing to redo'"
+              :aria-label="history.redo ? 'Redo: ' + history.redo : 'Nothing to redo'"
               :disabled="!history.redo"
               @click="revert(false)"
             >
@@ -1299,8 +1312,14 @@ onBeforeUnmount(() => {
           </template>
           <template v-if="canEdit && nodes.length > 1">
             <span class="sep"></span>
-            <button title="Force layout" @click="relayout('force')"><Network :size="16" /></button>
-            <button title="Hierarchy layout" @click="relayout('hierarchy')">
+            <button title="Force layout" aria-label="Force layout" @click="relayout('force')">
+              <Network :size="16" />
+            </button>
+            <button
+              title="Hierarchy layout"
+              aria-label="Hierarchy layout"
+              @click="relayout('hierarchy')"
+            >
               <Workflow :size="16" />
             </button>
           </template>
@@ -1349,9 +1368,10 @@ onBeforeUnmount(() => {
           v-if="!(showChat || showNotes)"
           class="side-close"
           title="Close the panel (Escape)"
+          aria-label="Close the panel (Escape)"
           @click="closeSide"
         >
-          &times;
+          <span aria-hidden="true">&times;</span>
         </button>
         <div v-else class="side-head">
           <div v-if="one" class="tabs side-tabs">
@@ -1379,8 +1399,13 @@ onBeforeUnmount(() => {
               Notes
             </button>
           </div>
-          <button class="side-close inline" title="Close the panel (Escape)" @click="closeSide">
-            &times;
+          <button
+            class="side-close inline"
+            title="Close the panel (Escape)"
+            aria-label="Close the panel (Escape)"
+            @click="closeSide"
+          >
+            <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <ChatPanel
@@ -1480,7 +1505,7 @@ onBeforeUnmount(() => {
       </div>
       <div v-if="drawer === 'logs'" class="log code-font">
         <div v-if="logs.length" class="log-filters">
-          <select v-model="logLevel" class="form-select">
+          <select v-model="logLevel" class="form-select" aria-label="Log level">
             <option value="">All levels</option>
             <option v-for="lv in logLevels" :key="lv" :value="lv">{{ lv }}</option>
           </select>
@@ -1495,7 +1520,11 @@ onBeforeUnmount(() => {
           class="line"
           :class="{ clickable: l.scan_id }"
           :title="l.scan_id ? 'Show the scan' : ''"
+          :role="l.scan_id ? 'button' : undefined"
+          :tabindex="l.scan_id ? 0 : undefined"
           @click="toScan(l)"
+          @keydown.enter="toScan(l)"
+          @keydown.space.prevent="toScan(l)"
         >
           <span class="text-muted">{{ formatTimeParts(l.created_at, clock) }}</span>
           <StatusBadge :status="l.level" scope="log" />
@@ -1544,15 +1573,15 @@ onBeforeUnmount(() => {
           </template>
         </div>
         <div v-if="newSchedule" class="line">
-          <select v-model="newSchedule.flow_id" class="form-select">
+          <select v-model="newSchedule.flow_id" class="form-select" aria-label="Flow">
             <option v-for="f in flowsForSchedule" :key="f.id" :value="f.id">
               {{ f.name }} ({{ f.definition.input }})
             </option>
           </select>
-          <select v-model.number="newSchedule.every" class="form-select">
+          <select v-model.number="newSchedule.every" class="form-select" aria-label="Interval">
             <option v-for="o in everyOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
-          <select v-model="newSchedule.scope" class="form-select">
+          <select v-model="newSchedule.scope" class="form-select" aria-label="Scope">
             <option value="all">on every entity of the input type</option>
             <option value="selection" :disabled="!selected.size">
               on the selection ({{ selected.size }})
@@ -1735,7 +1764,7 @@ onBeforeUnmount(() => {
 .sketch {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--topbar));
+  height: calc(100dvh - var(--topbar));
 }
 
 .bar {
@@ -2203,5 +2232,30 @@ onBeforeUnmount(() => {
 .steps li {
   display: flex;
   gap: 8px;
+}
+
+/* On a narrow screen the entities panel lies over the graph instead of
+   taking a share of the row, and the panels never run past the edge. */
+@media (max-width: 900px) {
+  .body {
+    position: relative;
+  }
+
+  .leftbar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: var(--z-panel);
+  }
+
+  .side,
+  .side.wide {
+    max-width: calc(100vw - 24px);
+  }
+
+  .find {
+    width: 160px;
+  }
 }
 </style>

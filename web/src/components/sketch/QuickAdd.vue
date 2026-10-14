@@ -177,6 +177,7 @@ onBeforeUnmount(() => {
         v-model="value"
         class="form-input"
         :placeholder="chosen ? `${chosen.title}...` : 'Type a value or a type...'"
+        :aria-label="chosen ? `${chosen.title} value` : 'Type a value or a type'"
         :disabled="busy"
         @keydown="inputKey"
         @blur="!value.trim() && !chosen && emit('close')"
@@ -217,6 +218,7 @@ onBeforeUnmount(() => {
   position: fixed;
   z-index: var(--z-float);
   width: 290px;
+  max-width: calc(100vw - 24px);
   padding: 6px;
   background: var(--bg-popover);
   border: 1px solid var(--border-primary);

@@ -34,6 +34,13 @@ async function load() {
 
 onMounted(load)
 
+// openRow opens a template's editor, the title is the link. A click on
+// a link or button inside is theirs, a built-in row opens nothing.
+function openRow(ev: MouseEvent, e: Transform) {
+  if (!e.template_id || (ev.target as HTMLElement).closest('a, button')) return
+  void router.push(`/templates/${e.template_id}`)
+}
+
 // Templates move as YAML files: one, or every template of the account
 // in one.
 async function save(id?: string) {
@@ -77,6 +84,7 @@ async function pickFile(ev: Event) {
     v-model="filter"
     class="form-input mb-4 w-search"
     placeholder="Filter by name, type or description"
+    aria-label="Filter transforms"
   />
   <LoadingBlock v-if="loading" />
   <div v-else class="card table-wrapper">
@@ -96,10 +104,17 @@ async function pickFile(ev: Event) {
           v-for="e in shown"
           :key="e.name + e.template_id"
           :class="{ 'row-clickable': e.template_id }"
-          @click="e.template_id && router.push(`/templates/${e.template_id}`)"
+          @click="openRow($event, e)"
         >
           <td class="cell-title">
-            {{ e.name }} <span v-if="e.template_id" class="badge badge-secondary">template</span>
+            <router-link
+              v-if="e.template_id"
+              class="row-link"
+              :to="`/templates/${e.template_id}`"
+              >{{ e.name }}</router-link
+            >
+            <template v-else>{{ e.name }}</template>
+            <span v-if="e.template_id" class="badge badge-secondary">template</span>
             <span v-if="e.file" class="badge badge-secondary" :title="e.file">file</span>
           </td>
           <td>{{ e.input || 'any' }}</td>

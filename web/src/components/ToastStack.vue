@@ -17,13 +17,14 @@ const notify = useNotificationStore()
        it was raised, and a stacking context somewhere up the tree
        would otherwise be able to trap it. -->
   <Teleport to="body">
-    <div class="toast-container">
+    <div class="toast-container" role="status" aria-live="polite">
       <button
         v-for="t in notify.toasts"
         :key="t.key"
         type="button"
         class="toast"
         :class="`toast-${t.kind}`"
+        :role="t.kind === 'error' ? 'alert' : undefined"
         @click="notify.dismiss(t.key)"
       >
         {{ t.text }}

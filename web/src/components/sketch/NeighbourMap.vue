@@ -145,9 +145,16 @@ const placed = computed(() => {
         stroke="transparent"
         stroke-width="10"
         class="dot"
+        role="button"
+        tabindex="0"
+        :aria-label="p.n.label"
         @mouseenter="hovered = p.n"
         @mouseleave="hovered = null"
+        @focus="hovered = p.n"
+        @blur="hovered = null"
         @click="emit('focus', p.n.id)"
+        @keydown.enter="emit('focus', p.n.id)"
+        @keydown.space.prevent="emit('focus', p.n.id)"
       >
         <title>{{ p.n.label }}</title>
       </circle>
@@ -195,6 +202,12 @@ svg {
   cursor: pointer;
   stroke: var(--bg-secondary);
   stroke-width: 1;
+}
+
+.dot:focus-visible {
+  outline: none;
+  stroke: var(--border-focus);
+  stroke-width: 2;
 }
 
 .center {

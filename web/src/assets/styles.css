@@ -383,7 +383,8 @@ a:not([class]):hover {
 }
 
 .btn:focus-visible {
-  outline: none;
+  /* Transparent rather than none: forced colours mode draws it. */
+  outline: 2px solid transparent;
   border-color: var(--border-focus);
   box-shadow: var(--shadow-focus);
 }
@@ -490,7 +491,7 @@ a:not([class]):hover {
   transition:
     border-color var(--transition),
     box-shadow var(--transition);
-  outline: none;
+  outline: 2px solid transparent;
 }
 
 .form-input:hover:not(:disabled):not(:focus),
@@ -971,7 +972,7 @@ tbody tr:hover td {
   box-shadow: var(--shadow-lg);
   width: 100%;
   max-width: 520px;
-  max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
   animation: modalSlideUp 200ms ease;
 }
@@ -1685,6 +1686,18 @@ input[type='checkbox']:checked::before {
   background: var(--bg-hover);
 }
 
+/* The title of a clickable row as a real link, so the keyboard and a
+   middle click reach what the row opens. Looks like the plain text
+   until hovered. */
+.row-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.row-link:hover {
+  text-decoration: underline;
+}
+
 /* Status pill with a leading colored dot --- inherits the badge color. */
 .badge-dot::before {
   content: '';
@@ -1735,3 +1748,15 @@ input[type='checkbox']:checked::before {
    ::picker(select)::-webkit-scrollbar block: chaining two
    pseudo-elements is refused by Lightning CSS, and every browser new
    enough for the picker honours scrollbar-color anyway. */
+
+/* --------- Reduced motion --------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

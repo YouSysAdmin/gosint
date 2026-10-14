@@ -149,8 +149,13 @@ function dragType(ev: DragEvent, type: string) {
       <div v-if="picked.length" class="picked">
         <div class="flex items-center gap-2 mb-2">
           <span class="text-sm fw-medium">{{ picked.length }} selected</span>
-          <button class="icon-btn ml-auto" title="Clear the selection" @click="emit('clear')">
-            &times;
+          <button
+            class="icon-btn ml-auto"
+            title="Clear the selection"
+            aria-label="Clear the selection"
+            @click="emit('clear')"
+          >
+            <span aria-hidden="true">&times;</span>
           </button>
         </div>
         <ul class="picked-list">
@@ -158,7 +163,11 @@ function dragType(ev: DragEvent, type: string) {
             v-for="n in picked.slice(0, PICKED_SHOWN)"
             :key="n.id"
             class="picked-row"
+            role="button"
+            tabindex="0"
             @click="emit('focus', n.id)"
+            @keydown.enter="emit('focus', n.id)"
+            @keydown.space.prevent="emit('focus', n.id)"
           >
             <span class="label">{{ n.label }}</span>
             <span class="type-badge" :style="{ '--chip': catalog.color(n.type) }">{{
@@ -186,7 +195,12 @@ function dragType(ev: DragEvent, type: string) {
       </div>
 
       <div class="controls">
-        <select v-model="typeFilter" class="form-select" title="Only one type">
+        <select
+          v-model="typeFilter"
+          class="form-select"
+          title="Only one type"
+          aria-label="Only one type"
+        >
           <option value="">All types</option>
           <option v-for="[t, c] in types" :key="t" :value="t">
             {{ catalog.type(t)?.title ?? t }} ({{ c }})
@@ -217,11 +231,16 @@ function dragType(ev: DragEvent, type: string) {
           :key="n.id"
           class="row"
           :class="{ on: selected.has(n.id) }"
+          role="button"
+          tabindex="0"
           @click="emit('focus', n.id)"
+          @keydown.enter.self="emit('focus', n.id)"
+          @keydown.space.self.prevent="emit('focus', n.id)"
         >
           <input
             type="checkbox"
             :checked="selected.has(n.id)"
+            :aria-label="`Select ${n.label}`"
             @click.stop
             @change="emit('toggle', n.id)"
           />
@@ -243,7 +262,12 @@ function dragType(ev: DragEvent, type: string) {
 
     <template v-else>
       <div class="controls">
-        <input v-model="typeSearch" class="form-input" placeholder="Search a type" />
+        <input
+          v-model="typeSearch"
+          class="form-input"
+          placeholder="Search a type"
+          aria-label="Search a type"
+        />
         <button
           class="btn btn-sm btn-secondary"
           title="Import a list or a JSON export"
@@ -388,6 +412,12 @@ function dragType(ev: DragEvent, type: string) {
 
 .row.on {
   background: var(--bg-active);
+}
+
+.row:focus-visible,
+.picked-row:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
 }
 
 /* A flex child, the box would shrink beside a long label. */

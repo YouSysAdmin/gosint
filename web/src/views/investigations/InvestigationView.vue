@@ -130,6 +130,12 @@ function openSketch(ev: MouseEvent, s: Sketch) {
   void router.push(`/sketches/${s.id}`)
 }
 
+// openAnalysis is the same for an analysis row.
+function openAnalysis(ev: MouseEvent, a: Analysis) {
+  if ((ev.target as HTMLElement).closest('a, button')) return
+  void router.push(`/investigations/${id.value}/analyses/${a.id}`)
+}
+
 function initials(email: string): string {
   return email.split('@')[0].slice(0, 2).toUpperCase()
 }
@@ -454,9 +460,13 @@ onMounted(load)
             v-for="a in analyses"
             :key="a.id"
             class="row-clickable"
-            @click="router.push(`/investigations/${id}/analyses/${a.id}`)"
+            @click="openAnalysis($event, a)"
           >
-            <td class="cell-title">{{ a.title }}</td>
+            <td class="cell-title">
+              <router-link class="row-link" :to="`/investigations/${id}/analyses/${a.id}`">{{
+                a.title
+              }}</router-link>
+            </td>
             <td class="cell-nowrap text-muted text-right">updated {{ timeAgo(a.updated_at) }}</td>
             <td v-if="canManage" class="cell-nowrap text-right">
               <button class="btn btn-sm btn-secondary" @click.stop="removeAnalysis(a)">

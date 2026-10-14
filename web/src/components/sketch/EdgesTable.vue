@@ -52,8 +52,13 @@ const rows = computed(() => {
 <template>
   <div class="table-view">
     <div class="bar">
-      <input v-model="search" class="form-input" placeholder="Search relationships and entities" />
-      <select v-model="labelFilter" class="form-select">
+      <input
+        v-model="search"
+        class="form-input"
+        placeholder="Search relationships and entities"
+        aria-label="Search relationships and entities"
+      />
+      <select v-model="labelFilter" class="form-select" aria-label="Only one relationship">
         <option value="">All relationships</option>
         <option v-for="l in labels" :key="l" :value="l">{{ l }}</option>
       </select>
@@ -78,7 +83,9 @@ const rows = computed(() => {
             :key="e.id"
             class="row-clickable"
             :class="{ on: e.id === selectedEdge }"
+            tabindex="0"
             @click="emit('pick', e.id)"
+            @keydown.enter.self="emit('pick', e.id)"
           >
             <td>
               <a v-if="from" href="#" class="end" @click.prevent.stop="emit('focus', from.id)">
@@ -146,5 +153,10 @@ const rows = computed(() => {
 
 tr.on td {
   background: var(--bg-active);
+}
+
+tr.row-clickable:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
 }
 </style>

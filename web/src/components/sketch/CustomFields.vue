@@ -66,8 +66,14 @@ function add() {
         :inputmode="r.kind === 'number' ? 'decimal' : undefined"
         :placeholder="r.kind === 'number' ? '0' : 'Value'"
       />
-      <button type="button" class="unlink" title="Remove the field" @click="emit('remove', i)">
-        &times;
+      <button
+        type="button"
+        class="unlink"
+        title="Remove the field"
+        aria-label="Remove the field"
+        @click="emit('remove', i)"
+      >
+        <span aria-hidden="true">&times;</span>
       </button>
       <p v-if="r.error" class="form-error custom-error">{{ r.key }} is {{ r.error }}</p>
     </div>

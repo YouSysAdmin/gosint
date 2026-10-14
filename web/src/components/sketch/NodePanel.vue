@@ -740,16 +740,17 @@ onBeforeUnmount(() => {
             :style="{ '--chip': l.other ? colorOf(l.other) : 'var(--text-muted)' }"
             :title="l.other?.label"
           >
-            <span class="name" @click="l.other && emit('focus', l.other.id)">{{
-              l.other?.label ?? 'unknown'
-            }}</span>
+            <button type="button" class="name" @click="l.other && emit('focus', l.other.id)">
+              {{ l.other?.label ?? 'unknown' }}
+            </button>
             <button
               v-if="canEdit"
               class="unlink"
               title="Remove this relationship"
+              aria-label="Remove this relationship"
               @click="unlink(l.id)"
             >
-              &times;
+              <span aria-hidden="true">&times;</span>
             </button>
           </span>
           <button
@@ -774,6 +775,7 @@ onBeforeUnmount(() => {
         rows="3"
         :readonly="!canEdit"
         placeholder="Write something about this entity"
+        aria-label="Notes"
         @input="onNotes"
         @blur="saveNotes"
       />
@@ -786,6 +788,7 @@ onBeforeUnmount(() => {
           type="range"
           min="3"
           max="30"
+          aria-label="Size"
           :value="node.size ?? 6"
           :disabled="busy"
           @change="save({ size: Number(($event.target as HTMLInputElement).value) })"
@@ -898,8 +901,14 @@ onBeforeUnmount(() => {
               The entity's picture
             </span>
           </div>
-          <button v-if="canEdit" class="remove" title="Remove the file" @click="removeFile(f)">
-            &times;
+          <button
+            v-if="canEdit"
+            class="remove"
+            title="Remove the file"
+            aria-label="Remove the file"
+            @click="removeFile(f)"
+          >
+            <span aria-hidden="true">&times;</span>
           </button>
         </li>
       </ul>
@@ -1057,14 +1066,14 @@ onBeforeUnmount(() => {
 .lightbox img,
 .lightbox video {
   max-width: 100%;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100dvh - 100px);
   border-radius: var(--radius-sm);
   background: var(--bg-primary);
 }
 
 .lightbox .frame {
   width: min(100%, 1000px);
-  height: calc(100vh - 100px);
+  height: calc(100dvh - 100px);
   border: 0;
   border-radius: var(--radius-sm);
   background: #fff;
@@ -1072,7 +1081,7 @@ onBeforeUnmount(() => {
 
 .lightbox .sheet {
   width: min(100%, 900px);
-  max-height: calc(100vh - 100px);
+  max-height: calc(100dvh - 100px);
   overflow: auto;
   margin: 0;
   padding: 12px 16px;
@@ -1278,6 +1287,12 @@ onBeforeUnmount(() => {
 
 .end .name {
   min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;

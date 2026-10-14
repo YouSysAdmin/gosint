@@ -34,7 +34,7 @@ const light = EditorView.theme({
 const base = EditorView.theme({
   '&': { fontSize: '13px', height: '100%' },
   '.cm-scroller': { fontFamily: 'var(--font-mono, ui-monospace, monospace)', overflow: 'auto' },
-  '&.cm-focused': { outline: 'none' },
+  '&.cm-focused': { outline: '2px solid transparent' },
 })
 
 onMounted(() => {
@@ -95,6 +95,13 @@ onBeforeUnmount(() => view?.destroy())
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   overflow: hidden;
+}
+
+/* The editor's own outline is off, the box around it shows the focus
+   like an input does. */
+.yaml-editor:focus-within {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
 }
 
 .yaml-editor :deep(.cm-editor) {

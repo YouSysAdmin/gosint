@@ -3,7 +3,7 @@
 // profile and signing out. An administrator also sees a badge when a
 // newer release is out.
 import { Monitor, Moon, Sun } from 'lucide-vue-next'
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { latestRelease, type Release } from '@/api/admin'
 import { signOut, useAuthStore } from '@/stores/auth'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
@@ -12,7 +12,10 @@ const auth = useAuthStore()
 const theme = useThemeStore()
 const open = ref(false)
 const host = ref<HTMLElement | null>(null)
+const trigger = ref<HTMLButtonElement | null>(null)
+const panel = ref<HTMLElement | null>(null)
 const release = ref<Release | null>(null)
+let byKeyboard = false
 
 // A failed check shows nothing, it is a hint and not a feature.
 watch(
@@ -47,8 +50,26 @@ function away(ev: MouseEvent) {
 }
 
 function key(ev: KeyboardEvent) {
-  if (ev.key === 'Escape') open.value = false
+  if (ev.key === 'Escape' && open.value) {
+    // The page's own Escape (a cleared selection) is not meant.
+    ev.stopPropagation()
+    open.value = false
+    trigger.value?.focus()
+  }
 }
+
+function toggle(ev: MouseEvent) {
+  // A click raised by Enter or Space on the button has no position.
+  byKeyboard = ev.detail === 0
+  open.value = !open.value
+}
+
+// Opened from the keyboard, the first item takes the focus.
+watch(open, async (on) => {
+  if (!on || !byKeyboard) return
+  await nextTick()
+  panel.value?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+})
 
 onMounted(() => {
   document.addEventListener('mousedown', away, true)
@@ -72,11 +93,18 @@ onBeforeUnmount(() => {
       :title="`Running ${release.current}, release notes for ${release.latest}`"
       >Update {{ release.latest }}</a
     >
-    <button class="trigger" :title="auth.user?.email" :aria-expanded="open" @click="open = !open">
+    <button
+      ref="trigger"
+      class="trigger"
+      :title="auth.user?.email"
+      aria-haspopup="menu"
+      :aria-expanded="open"
+      @click="toggle"
+    >
       <img v-if="auth.user?.avatar_url" :src="auth.user.avatar_url" class="avatar" alt="" />
       <span v-else class="avatar initials">{{ initials() }}</span>
     </button>
-    <div v-if="open" class="menu">
+    <div v-if="open" ref="panel" class="menu" role="menu">
       <div class="who">
         <div class="fw-medium">
           {{
@@ -98,6 +126,7 @@ onBeforeUnmount(() => {
             class="mode"
             :class="{ on: theme.mode === m.value }"
             :title="m.title"
+            :aria-pressed="theme.mode === m.value"
             @click="theme.setMode(m.value)"
           >
             <component :is="m.icon" :size="15" />
@@ -105,8 +134,10 @@ onBeforeUnmount(() => {
         </span>
       </div>
       <div class="menu-sep"></div>
-      <router-link class="menu-item" to="/profile" @click="open = false">Profile</router-link>
-      <button class="menu-item" @click="signOut()">Sign out</button>
+      <router-link class="menu-item" role="menuitem" to="/profile" @click="open = false"
+        >Profile</router-link
+      >
+      <button class="menu-item" role="menuitem" @click="signOut()">Sign out</button>
     </div>
   </div>
 </template>

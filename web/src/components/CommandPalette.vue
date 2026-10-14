@@ -157,6 +157,15 @@ const shown = computed(() => {
 
 watch(shown, () => (cursor.value = 0))
 
+// The highlighted row stays in sight as the arrows move it.
+const list = ref<HTMLElement | null>(null)
+watch(cursor, async (i) => {
+  await nextTick()
+  const it = shown.value[i]
+  if (!it) return
+  list.value?.querySelector(`#palette-${CSS.escape(it.id)}`)?.scrollIntoView({ block: 'nearest' })
+})
+
 // loadLists asks the server for both lists, one request pair at a time.
 function loadLists(): Promise<void> {
   if (listing) return listing
@@ -233,11 +242,20 @@ defineExpose({ show })
           v-model="query"
           class="form-input"
           placeholder="Jump to an investigation, a sketch, a page or an entity"
+          aria-label="Jump to an investigation, a sketch, a page or an entity"
+          role="combobox"
+          aria-autocomplete="list"
+          :aria-expanded="true"
+          aria-controls="palette-results"
+          :aria-activedescendant="shown[cursor] ? 'palette-' + shown[cursor].id : undefined"
         />
-        <ul class="results">
+        <ul id="palette-results" ref="list" class="results" role="listbox">
           <li
             v-for="(it, i) in shown"
+            :id="'palette-' + it.id"
             :key="it.id"
+            role="option"
+            :aria-selected="i === cursor"
             :class="{ on: i === cursor }"
             @mouseenter="cursor = i"
             @click="go(it)"
@@ -286,7 +304,7 @@ defineExpose({ show })
 
 .results li {
   display: grid;
-  grid-template-columns: 100px 1fr auto;
+  grid-template-columns: 100px minmax(0, 1fr) minmax(0, 40%);
   align-items: center;
   gap: 10px;
   padding: 7px 10px;
@@ -304,7 +322,8 @@ defineExpose({ show })
   cursor: default;
 }
 
-.title {
+.title,
+.hint {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

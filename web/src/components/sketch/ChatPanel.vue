@@ -325,7 +325,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="chat">
     <div class="top">
-      <select v-model="current" class="form-select pick" title="Earlier chats">
+      <select v-model="current" class="form-select pick" title="Earlier chats" aria-label="Chat">
         <option value="">New chat</option>
         <template v-if="about.length">
           <optgroup label="About the selected entities">
@@ -350,9 +350,10 @@ onBeforeUnmount(() => {
         v-if="current"
         class="btn btn-sm btn-secondary"
         title="Delete this chat"
+        aria-label="Delete this chat"
         @click="remove"
       >
-        &times;
+        <span aria-hidden="true">&times;</span>
       </button>
     </div>
 
@@ -424,6 +425,7 @@ onBeforeUnmount(() => {
         class="form-textarea"
         rows="3"
         placeholder="Ask something, Enter sends, Shift+Enter breaks the line"
+        aria-label="Question"
         :disabled="busy"
         @keydown="onKey"
       />
@@ -432,6 +434,7 @@ onBeforeUnmount(() => {
           v-if="models.length > 1"
           class="form-select model"
           title="The model that answers"
+          aria-label="The model that answers"
           :value="model?.id"
           :disabled="busy"
           @change="pick(($event.target as HTMLSelectElement).value)"

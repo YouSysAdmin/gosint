@@ -28,6 +28,13 @@ async function load() {
 
 onMounted(load)
 
+// openRow is the row as a mouse target, the title is the link. A click
+// on a link or button inside is theirs.
+function openRow(ev: MouseEvent, f: Flow) {
+  if ((ev.target as HTMLElement).closest('a, button')) return
+  void router.push(`/flows/${f.id}`)
+}
+
 // Flows move as files: one, or every flow of the account in one.
 async function save(id?: string) {
   try {
@@ -83,13 +90,10 @@ async function pickFile(ev: Event) {
         </tr>
       </thead>
       <tbody>
-        <tr
-          v-for="f in flows"
-          :key="f.id"
-          class="row-clickable"
-          @click="router.push(`/flows/${f.id}`)"
-        >
-          <td class="cell-title">{{ f.name }}</td>
+        <tr v-for="f in flows" :key="f.id" class="row-clickable" @click="openRow($event, f)">
+          <td class="cell-title">
+            <router-link class="row-link" :to="`/flows/${f.id}`">{{ f.name }}</router-link>
+          </td>
           <td>{{ f.definition.input }}</td>
           <td>{{ f.definition.steps.length }}</td>
           <td class="cell-nowrap">{{ timeAgo(f.updated_at) }}</td>

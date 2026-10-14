@@ -217,7 +217,12 @@ onMounted(load)
   <div v-else class="card">
     <div class="card-body">
       <div class="search-row mb-3">
-        <input v-model="search" class="form-input" placeholder="Search by email" />
+        <input
+          v-model="search"
+          class="form-input"
+          placeholder="Search by email"
+          aria-label="Search accounts by email"
+        />
         <span v-if="loading" class="text-xs text-muted">Updating...</span>
       </div>
       <table v-if="users.length">

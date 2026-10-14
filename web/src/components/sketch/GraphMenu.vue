@@ -156,7 +156,7 @@ async function removeEdge() {
 // place keeps the menu inside the window. The height is watched, the
 // transform list arrives after the menu opened and makes it taller.
 const place = computed(() => {
-  const w = 320
+  const w = Math.min(320, window.innerWidth - 16)
   const x = Math.min(props.x, window.innerWidth - w - 8)
   const y = Math.min(props.y, window.innerHeight - height.value - 8)
   return { left: Math.max(8, x) + 'px', top: Math.max(8, y) + 'px' }
@@ -168,6 +168,29 @@ function away(ev: MouseEvent) {
 
 function key(ev: KeyboardEvent) {
   if (ev.key === 'Escape') emit('close')
+}
+
+// label names what the menu was opened on for assistive technology.
+const label = computed(() => {
+  if (props.kind === 'node' && props.nodes[0]) return `Actions on ${props.nodes[0].label}`
+  if (props.kind === 'selection') return `Actions on ${props.nodes.length} selected entities`
+  if (props.kind === 'edge') return `Actions on the relationship ${props.edge?.label ?? ''}`.trim()
+
+  return 'Canvas actions'
+})
+
+// arrows moves the focus through the menu's items and rows, wrapping
+// around, so the menu reads from the keyboard like a native one.
+function arrows(ev: KeyboardEvent) {
+  if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return
+  const items = el.value ? [...el.value.querySelectorAll<HTMLElement>('[role=menuitem], .row')] : []
+  if (!items.length) return
+  ev.preventDefault()
+  const at = items.indexOf(document.activeElement as HTMLElement)
+  const step = ev.key === 'ArrowDown' ? 1 : -1
+  const next =
+    at < 0 ? (step > 0 ? 0 : items.length - 1) : (at + step + items.length) % items.length
+  items[next]?.focus()
 }
 
 async function loadCatalog() {
@@ -222,7 +245,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="el" class="menu" :style="place" @contextmenu.prevent>
+  <div
+    ref="el"
+    class="menu"
+    role="menu"
+    :aria-label="label"
+    :style="place"
+    @contextmenu.prevent
+    @keydown="arrows"
+  >
     <!-- Entity or selection -->
     <template v-if="kind === 'node' || kind === 'selection'">
       <div class="head">
@@ -246,12 +277,16 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-if="canEdit" class="actions">
-        <button v-if="node" class="menu-item" @click="emit('addRelation', node)">
+        <button v-if="node" class="menu-item" role="menuitem" @click="emit('addRelation', node)">
           Add a related entity
         </button>
-        <button v-if="node" class="menu-item" @click="emit('linkTo', node)">Link to...</button>
-        <button v-if="node" class="menu-item" @click="emit('clone', node)">Clone</button>
-        <button class="menu-item" @click="emit('askAi')">Ask the assistant</button>
+        <button v-if="node" class="menu-item" role="menuitem" @click="emit('linkTo', node)">
+          Link to...
+        </button>
+        <button v-if="node" class="menu-item" role="menuitem" @click="emit('clone', node)">
+          Clone
+        </button>
+        <button class="menu-item" role="menuitem" @click="emit('askAi')">Ask the assistant</button>
         <div v-if="node" class="flags">
           <span class="text-xs text-muted">Flag</span>
           <button
@@ -264,7 +299,7 @@ onBeforeUnmount(() => {
             @click="emit('flag', node, node.flag === f ? '' : f)"
           ></button>
         </div>
-        <button class="menu-item danger" @click="emit('delete')">
+        <button class="menu-item danger" role="menuitem" @click="emit('delete')">
           Delete{{ node ? '' : ` ${nodes.length}` }}
         </button>
       </div>
@@ -373,7 +408,11 @@ onBeforeUnmount(() => {
       </p>
 
       <div v-if="kind === 'selection'" class="foot">
-        <button class="menu-item" @click="copy(nodes.map((n) => n.label).join('\n'))">
+        <button
+          class="menu-item"
+          role="menuitem"
+          @click="copy(nodes.map((n) => n.label).join('\n'))"
+        >
           Copy {{ nodes.length }} labels as text
         </button>
         <slot name="export" />
@@ -397,19 +436,25 @@ onBeforeUnmount(() => {
       </form>
       <p v-else class="pad code-font">{{ edge.label }}</p>
       <div v-if="canEdit" class="actions">
-        <button class="menu-item danger" @click="removeEdge">Delete the relationship</button>
+        <button class="menu-item danger" role="menuitem" @click="removeEdge">
+          Delete the relationship
+        </button>
       </div>
     </template>
 
     <!-- Empty canvas -->
     <template v-else>
       <div class="actions">
-        <button class="menu-item" @click="emit('selectAll')">Select everything shown</button>
-        <button class="menu-item" @click="emit('invert')">Invert the selection</button>
+        <button class="menu-item" role="menuitem" @click="emit('selectAll')">
+          Select everything shown
+        </button>
+        <button class="menu-item" role="menuitem" @click="emit('invert')">
+          Invert the selection
+        </button>
       </div>
       <div v-if="canEdit" class="actions">
-        <button class="menu-item" @click="emit('add')">Add an entity here</button>
-        <button class="menu-item" @click="emit('import')">Import entities</button>
+        <button class="menu-item" role="menuitem" @click="emit('add')">Add an entity here</button>
+        <button class="menu-item" role="menuitem" @click="emit('import')">Import entities</button>
       </div>
       <p v-else class="text-xs text-muted pad">View only</p>
     </template>
@@ -421,7 +466,8 @@ onBeforeUnmount(() => {
   position: fixed;
   z-index: var(--z-float);
   width: 320px;
-  max-height: calc(100vh - 16px);
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 16px);
   display: flex;
   flex-direction: column;
   background: var(--bg-popover);

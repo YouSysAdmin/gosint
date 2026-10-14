@@ -361,10 +361,16 @@ onBeforeUnmount(() => {
   overflow-y: auto;
 }
 
+/* The editor's own outline is off, the box around it shows the focus
+   like an input does. Inset, since the card holding it clips. */
+.analysis-editor:focus-within {
+  box-shadow: inset 0 0 0 3px var(--ring);
+}
+
 .content :deep(.tiptap) {
   min-height: 200px;
   padding: 14px 16px;
-  outline: none;
+  outline: 2px solid transparent;
   font-size: 14px;
   line-height: 1.6;
 }

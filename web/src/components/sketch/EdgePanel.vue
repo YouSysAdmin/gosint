@@ -85,7 +85,7 @@ async function remove() {
   <div class="panel">
     <div class="text-sm text-muted mb-1">Relationship</div>
     <form v-if="canEdit" class="flex gap-2 mb-4" @submit.prevent="save">
-      <input v-model="label" class="form-input code-font" />
+      <input v-model="label" class="form-input code-font" aria-label="Relationship label" />
       <button
         class="btn btn-sm btn-primary"
         :disabled="busy || normalizeLabel(label) === edge.label"

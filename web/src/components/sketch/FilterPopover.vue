@@ -99,7 +99,9 @@ onBeforeUnmount(() => {
         @blur="commit(i)"
       />
       <span v-else class="form-input placeholder-cell"></span>
-      <button class="x" title="Remove the rule" @click="remove(i)">&times;</button>
+      <button class="x" title="Remove the rule" aria-label="Remove the rule" @click="remove(i)">
+        <span aria-hidden="true">&times;</span>
+      </button>
     </div>
     <div class="flex gap-2 mt-2">
       <button class="btn btn-sm btn-secondary" @click="add">Add a rule</button>
@@ -120,6 +122,7 @@ onBeforeUnmount(() => {
   left: 12px;
   z-index: var(--z-popover);
   width: 420px;
+  max-width: calc(100vw - 24px);
   padding: 12px;
   background: var(--bg-popover);
   border: 1px solid var(--border-primary);

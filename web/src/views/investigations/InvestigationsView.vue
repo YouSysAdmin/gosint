@@ -88,6 +88,13 @@ async function imported(result: unknown) {
   await router.push(`/investigations/${r.investigation.id}`)
 }
 
+// openRow is the row as a mouse target, the title is the link. A click
+// on a link or button inside is theirs.
+function openRow(ev: MouseEvent, i: Investigation) {
+  if ((ev.target as HTMLElement).closest('a, button')) return
+  void router.push(`/investigations/${i.id}`)
+}
+
 onMounted(load)
 </script>
 
@@ -106,7 +113,12 @@ onMounted(load)
   </div>
   <template v-else>
     <div class="toolbar">
-      <input v-model="search" class="form-input w-search" placeholder="Search investigations" />
+      <input
+        v-model="search"
+        class="form-input w-search"
+        placeholder="Search investigations"
+        aria-label="Search investigations"
+      />
       <div class="chips">
         <button
           v-for="f in ['all', 'active', 'archived'] as Filter[]"
@@ -162,9 +174,13 @@ onMounted(load)
             :key="i.id"
             class="row-clickable"
             :class="{ archived: i.status === 'archived' }"
-            @click="router.push(`/investigations/${i.id}`)"
+            @click="openRow($event, i)"
           >
-            <td class="cell-title">{{ i.name }}</td>
+            <td class="cell-title">
+              <router-link class="row-link" :to="`/investigations/${i.id}`">{{
+                i.name
+              }}</router-link>
+            </td>
             <td><StatusBadge :status="i.current_user_role" scope="role" /></td>
             <td>
               <span v-if="i.status === 'archived'" class="badge badge-neutral">archived</span>

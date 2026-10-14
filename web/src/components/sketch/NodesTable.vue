@@ -93,8 +93,9 @@ async function copy(n: GraphNode) {
         v-model="search"
         class="form-input"
         placeholder="Search entities and their properties"
+        aria-label="Search entities and their properties"
       />
-      <select v-model="typeFilter" class="form-select">
+      <select v-model="typeFilter" class="form-select" aria-label="Only one type">
         <option value="">All types</option>
         <option v-for="t in types" :key="t" :value="t">{{ catalog.type(t)?.title ?? t }}</option>
       </select>
@@ -110,6 +111,7 @@ async function copy(n: GraphNode) {
             <th class="tick">
               <input
                 type="checkbox"
+                aria-label="Select every entity shown"
                 :checked="allShown"
                 :indeterminate="someShown"
                 :disabled="!shown.length"
@@ -139,10 +141,17 @@ async function copy(n: GraphNode) {
             :key="n.id"
             class="row-clickable"
             :class="{ on: selected.has(n.id) }"
+            tabindex="0"
             @click="emit('focus', n.id)"
+            @keydown.enter.self="emit('focus', n.id)"
           >
             <td class="tick" @click.stop>
-              <input type="checkbox" :checked="selected.has(n.id)" @change="emit('toggle', n.id)" />
+              <input
+                type="checkbox"
+                :checked="selected.has(n.id)"
+                :aria-label="`Select ${n.label}`"
+                @change="emit('toggle', n.id)"
+              />
             </td>
             <td class="cell-nowrap">
               <span class="type"
@@ -219,5 +228,10 @@ async function copy(n: GraphNode) {
 
 tr.on td {
   background: var(--bg-active);
+}
+
+tr.row-clickable:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
 }
 </style>
