@@ -4,15 +4,21 @@
 // cheaper to refuse here than to find in the graph later. A run card is
 // a transform or a flow the model wanted to run that only the person
 // may start, since it contacts the target or spends a key.
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { applyChanges } from '@/api/chat'
 import { apiErrorMessage } from '@/api/client'
 import type { GraphNode, ProposedChange } from '@/api/types'
 import { useNotificationStore } from '@/stores/notification'
 
+// What was applied, by chat and message, kept for the page's life: the
+// cards are drawn again on every reload of the chat and an applied
+// change must not offer Apply a second time.
+const applied = reactive(new Map<string, Set<number>>())
+
 const props = defineProps<{
   sketchId: string
   chatId: string
+  messageId: string
   changes: ProposedChange[]
   nodes: GraphNode[]
   canEdit: boolean
@@ -20,7 +26,8 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'applied'): void }>()
 
 const toast = useNotificationStore()
-const done = ref(new Set<number>())
+const key = computed(() => props.chatId + ':' + props.messageId)
+const done = computed(() => applied.get(key.value) ?? new Set<number>())
 const busy = ref(false)
 
 const pending = computed(() => props.changes.map((_, i) => i).filter((i) => !done.value.has(i)))
@@ -75,8 +82,7 @@ async function apply(indexes: number[]) {
       props.chatId,
       indexes.map((i) => props.changes[i]),
     )
-    for (const i of indexes) done.value.add(i)
-    done.value = new Set(done.value)
+    applied.set(key.value, new Set([...done.value, ...indexes]))
     if (result.errors.length) toast.error(result.errors.join('. '))
     else if (result.launched && result.launched === result.applied)
       toast.success(`${result.launched} ${result.launched === 1 ? 'run' : 'runs'} started`)

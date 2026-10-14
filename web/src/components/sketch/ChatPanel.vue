@@ -3,6 +3,7 @@
 // entities handed to the model as context. Several chats per sketch,
 // each the account's own, the first question naming a new one.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import axios from 'axios'
 import {
   createChat,
   deleteChat,
@@ -30,6 +31,10 @@ const toast = useNotificationStore()
 const { confirm } = useConfirm()
 const chats = ref<Chat[]>([])
 const current = ref<string>('')
+// placeholders numbers the client-side ids a question and a cut-off
+// answer carry until the server's replace them (a UUID would need a
+// secure context, which a console over plain http is not).
+let placeholders = 0
 const messages = ref<ChatMessage[]>([])
 const prompt = ref('')
 const useContext = ref(true)
@@ -142,7 +147,6 @@ async function remove() {
     await deleteChat(props.sketchId, chat.value.id)
     current.value = ''
     await loadChats()
-    await loadMessages()
   } catch (err) {
     toast.error(apiErrorMessage(err))
   }
@@ -162,8 +166,10 @@ async function send() {
     }
 
     const ids = context.value.map((n) => n.id)
+    // The question gets an id of its own until the server's replaces
+    // it after the answer, so two questions never share a key.
     messages.value.push({
-      id: 'pending',
+      id: 'pending-' + ++placeholders,
       chat_id: current.value,
       role: 'user',
       content: text,
@@ -217,13 +223,18 @@ async function send() {
       model.value?.id ?? '',
     )
     await loadChats()
+    // The server's ids replace the pending ones. Not busy any more, or
+    // the load would keep the pending question beside the stored one.
+    busy.value = false
+    await loadMessages()
   } catch (err) {
     if (!(err instanceof DOMException && err.name === 'AbortError'))
-      problem.value = err instanceof Error ? err.message : String(err)
+      problem.value =
+        err instanceof Error && !axios.isAxiosError(err) ? err.message : apiErrorMessage(err)
     if (partial.value) {
       // Keep what arrived, the server stored the same.
       messages.value.push({
-        id: 'partial',
+        id: 'partial-' + ++placeholders,
         chat_id: current.value,
         role: 'assistant',
         content: partial.value,
@@ -272,11 +283,17 @@ function render(text: string): string {
   return safe.replace(/`([^`\n]+)`/g, '<code>$1</code>')
 }
 
-watch(current, loadMessages)
+watch(current, () => loadMessages().catch((err) => toast.error(apiErrorMessage(err))))
 
 onMounted(async () => {
+  // The models are their own call: without them the chat still lists.
   try {
     await loadModels()
+  } catch (err) {
+    toast.error(apiErrorMessage(err))
+  }
+
+  try {
     await loadChats()
     await loadMessages()
   } catch (err) {
@@ -347,6 +364,7 @@ onBeforeUnmount(stop)
           v-if="m.role === 'assistant' && proposals(m.content).length"
           :sketch-id="sketchId"
           :chat-id="m.chat_id"
+          :message-id="m.id"
           :changes="proposals(m.content)"
           :nodes="nodes"
           :can-edit="canEdit"

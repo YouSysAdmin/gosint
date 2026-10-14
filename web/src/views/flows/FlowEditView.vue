@@ -57,6 +57,7 @@ const transforms = ref<Transform[]>([])
 const selected = ref<string>(ROOT)
 const selectedEdge = ref('')
 const problem = ref('')
+const saving = ref(false)
 const paletteSearch = ref('')
 const { screenToFlowCoordinate } = useVueFlow()
 
@@ -316,13 +317,17 @@ async function check(): Promise<boolean> {
 }
 
 async function save() {
-  if (!(await check())) return
+  if (saving.value) return
+  saving.value = true
   try {
+    if (!(await check())) return
     const f = await saveFlow(id.value, name.value, description.value, definition.value)
     toast.success('Flow saved')
     if (!id.value) await router.replace(`/flows/${f.id}`)
   } catch (err) {
     toast.error(apiErrorMessage(err))
+  } finally {
+    saving.value = false
   }
 }
 
@@ -383,7 +388,7 @@ onMounted(async () => {
     <PageHeader :title="id ? name || 'Flow' : 'New flow'">
       <button v-if="id" class="btn btn-danger" @click="remove">Delete</button>
       <button class="btn btn-secondary" @click="check">Check</button>
-      <button class="btn btn-primary" @click="save">Save</button>
+      <button class="btn btn-primary" :disabled="saving" @click="save">Save</button>
     </PageHeader>
 
     <div class="card mb-4">

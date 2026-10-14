@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // The fields of one entity type as a form. Required fields are always
 // shown, the rest behind a toggle, which starts open when any of them
-// has a value already.
+// has a value already. Every text and number input writes a string, so
+// a number field compares like the rest and toProperties types it.
 import { computed, onMounted, ref, watch } from 'vue'
 import { listKeys } from '@/api/catalog'
 import type { TypeField } from '@/api/types'
@@ -83,12 +84,13 @@ watch(
       />
       <input
         v-else
-        v-model="values[f.name]"
         class="form-input"
         :type="control(f) === 'number' ? 'number' : 'text'"
         :step="f.kind === 'float' ? 'any' : undefined"
+        :value="String(values[f.name] ?? '')"
         :autofocus="autofocus && i === 0"
         :required="f.required || f.primary"
+        @input="values[f.name] = ($event.target as HTMLInputElement).value"
       />
     </FormField>
   </template>
@@ -125,10 +127,11 @@ watch(
           />
           <input
             v-else
-            v-model="values[f.name]"
             class="form-input"
             :type="control(f) === 'number' ? 'number' : 'text'"
             :step="f.kind === 'float' ? 'any' : undefined"
+            :value="String(values[f.name] ?? '')"
+            @input="values[f.name] = ($event.target as HTMLInputElement).value"
           />
         </FormField>
       </template>

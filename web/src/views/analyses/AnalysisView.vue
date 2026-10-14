@@ -3,8 +3,8 @@
 // document saving itself a moment after typing stops, and @ asking the
 // server for the entities of the investigation's sketches as the person
 // types. A reference clicked opens its sketch on that entity.
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { deleteAnalysis, getAnalysis, saveAnalysis } from '@/api/analyses'
 import { apiErrorMessage } from '@/api/client'
 import { investigationEntities } from '@/api/catalog'
@@ -12,6 +12,7 @@ import { getInvestigation } from '@/api/investigations'
 import type { Analysis, Investigation } from '@/api/types'
 import AnalysisEditor from '@/components/analysis/AnalysisEditor.vue'
 import type { MentionItem } from '@/components/analysis/MentionList.vue'
+import EmptyState from '@/components/EmptyState.vue'
 import LoadingBlock from '@/components/LoadingBlock.vue'
 import { modKey } from '@/composables/modKey'
 import { formatDate } from '@/composables/formatDate'
@@ -31,9 +32,17 @@ const inv = ref<Investigation | null>(null)
 const analysis = ref<Analysis | null>(null)
 const doc = ref<unknown>({})
 const title = ref('')
+const error = ref('')
 const renaming = ref(false)
+const titleInput = ref<HTMLInputElement | null>(null)
 const state = ref<'saved' | 'dirty' | 'saving'>('saved')
 let timer: ReturnType<typeof setTimeout> | null = null
+
+// Every edit bumps rev, a save remembers the rev it sent, so an edit
+// typed while it ran is seen when it lands and saved after. One save
+// runs at a time, pending is the one in flight.
+let rev = 0
+let pending: Promise<void> | null = null
 
 const canEdit = computed(() => inv.value?.current_user_role !== 'viewer')
 const canDelete = computed(
@@ -61,30 +70,70 @@ async function load() {
     doc.value = analysis.value.content ?? {}
     title.value = analysis.value.title
   } catch (err) {
-    toast.error(apiErrorMessage(err))
+    error.value = apiErrorMessage(err)
   }
+}
+
+function mark() {
+  rev++
+  state.value = 'dirty'
+}
+
+function schedule() {
+  if (timer) clearTimeout(timer)
+  timer = setTimeout(() => void save(), 1000)
 }
 
 function changed(next: unknown) {
   doc.value = next
-  state.value = 'dirty'
-  if (timer) clearTimeout(timer)
-  timer = setTimeout(save, 1000)
+  mark()
+  schedule()
 }
 
-async function save() {
-  if (state.value !== 'dirty' || !analysis.value) return
+function save(): Promise<void> {
+  if (timer) clearTimeout(timer)
+  timer = null
+  if (state.value === 'saved' || !analysis.value) return Promise.resolve()
+  if (pending) return pending
+  pending = write().finally(() => {
+    pending = null
+  })
+
+  return pending
+}
+
+async function write() {
+  if (!analysis.value) return
+  const sent = rev
   state.value = 'saving'
   try {
     analysis.value = await saveAnalysis(invId.value, id.value, {
       title: title.value.trim() || analysis.value.title,
       content: doc.value,
     })
-    state.value = 'saved'
+    if (rev === sent) {
+      state.value = 'saved'
+    } else {
+      state.value = 'dirty'
+      schedule()
+    }
   } catch (err) {
     state.value = 'dirty'
     toast.error(apiErrorMessage(err))
   }
+}
+
+// flush writes what is unsaved before the page goes, waiting for a
+// save in flight first since it may leave a later edit behind.
+async function flush() {
+  if (pending) await pending
+  if (state.value !== 'saved') await save()
+}
+
+function startRename() {
+  if (!canEdit.value) return
+  renaming.value = true
+  void nextTick(() => titleInput.value?.focus())
 }
 
 async function rename() {
@@ -93,7 +142,7 @@ async function rename() {
     title.value = analysis.value?.title ?? ''
     return
   }
-  state.value = 'dirty'
+  mark()
   await save()
 }
 
@@ -122,10 +171,23 @@ function openEntity(nodeId: string, sketchId: string) {
 function onKey(ev: KeyboardEvent) {
   if ((ev.metaKey || ev.ctrlKey) && (ev.key === 's' || ev.key === 'S')) {
     ev.preventDefault()
-    if (timer) clearTimeout(timer)
     void save()
   }
 }
+
+// The browser asks before closing the tab while an edit is unsaved.
+function onUnload(ev: BeforeUnloadEvent) {
+  ev.preventDefault()
+}
+
+watch(state, (s) => {
+  if (s === 'saved') window.removeEventListener('beforeunload', onUnload)
+  else window.addEventListener('beforeunload', onUnload)
+})
+
+onBeforeRouteLeave(async () => {
+  await flush()
+})
 
 onMounted(() => {
   void load()
@@ -134,21 +196,29 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
-  if (timer) clearTimeout(timer)
-  void save()
+  window.removeEventListener('beforeunload', onUnload)
+  void flush()
 })
 </script>
 
 <template>
-  <LoadingBlock v-if="!analysis || !inv" />
+  <div v-if="error" class="card">
+    <EmptyState title="The analysis could not be opened">
+      <p>{{ error }}</p>
+      <router-link class="btn btn-secondary" :to="`/investigations/${invId}`">
+        Back to the investigation
+      </router-link>
+    </EmptyState>
+  </div>
+  <LoadingBlock v-else-if="!analysis || !inv" />
   <div v-else class="page">
     <header class="head">
       <router-link class="back" :to="`/investigations/${invId}`">&larr; {{ inv.name }}</router-link>
       <input
         v-if="renaming"
+        ref="titleInput"
         v-model="title"
         class="form-input title-input"
-        autofocus
         @keydown.enter.prevent="rename"
         @keydown.escape="((renaming = false), (title = analysis.title))"
         @blur="rename"
@@ -158,7 +228,7 @@ onBeforeUnmount(() => {
         class="title"
         :class="{ editable: canEdit }"
         :title="canEdit ? 'Click to rename' : ''"
-        @click="canEdit && (renaming = true)"
+        @click="startRename"
       >
         {{ analysis.title }}
       </h2>

@@ -75,6 +75,7 @@ async function loadRaw() {
   rawState.value = 'loading'
   try {
     const res = await fetch(props.rawUrl, { credentials: 'same-origin' })
+    if (!res.ok) throw new Error(`${res.status}`)
     const text = await res.text()
     raw.value = text.length > rawMax ? text.slice(0, rawMax) + '\n... (cut)' : text
     rawState.value = 'done'

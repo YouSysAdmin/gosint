@@ -41,4 +41,24 @@ export function apiErrorMessage(err: unknown): string {
   return String(err)
 }
 
+// isStatus tells whether an error is the server answering that code.
+export function isStatus(err: unknown, status: number): boolean {
+  return axios.isAxiosError(err) && err.response?.status === status
+}
+
+// readBlobError reads the server's message back out of an error answered
+// to a blob request, where the body arrives as a Blob. The error is
+// returned with its data replaced, to be thrown again.
+export async function readBlobError(err: unknown): Promise<unknown> {
+  const data = (err as { response?: { data?: unknown } }).response?.data
+  if (data instanceof Blob) {
+    try {
+      ;(err as { response: { data: unknown } }).response.data = JSON.parse(await data.text())
+    } catch {
+      // Not JSON, the status alone tells the story.
+    }
+  }
+  return err
+}
+
 export default api

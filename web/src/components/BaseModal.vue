@@ -14,6 +14,14 @@
 // stack of its own holding only itself - indistinguishable from no check
 // at all.
 const openModals: symbol[] = []
+
+// isModalOpen tells a page whether a dialog is up, so its own keyboard
+// shortcuts (delete the selection, undo) stay quiet under a confirm.
+export function isModalOpen(): boolean {
+  return openModals.length > 0
+}
+
+let nextId = 0
 </script>
 
 <script setup lang="ts">
@@ -30,7 +38,7 @@ const openModals: symbol[] = []
 // exactly as long as the open dialog. Registering it when the VIEW
 // mounts instead means a page with three dialogs arms three Escape
 // handlers that fire whether anything is open or not.
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -75,32 +83,91 @@ function confirmClickEnd(event: MouseEvent) {
 }
 
 const id = Symbol('modal')
+const headerId = `modal-title-${++nextId}`
+const box = ref<HTMLElement | null>(null)
+
+// What had the focus before the dialog opened, given back on close.
+let opener: Element | null = null
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), ' +
+  'select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+function focusable(): HTMLElement[] {
+  return [...(box.value?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])].filter(
+    (el) => el.offsetParent !== null,
+  )
+}
+
+// The field marked autofocus, else the first one, else the box itself:
+// autofocus fires once per document, so every dialog after the first
+// opened with the focus still on the page behind it.
+function focusIn() {
+  const want = box.value?.querySelector<HTMLElement>('[autofocus]') ?? focusable()[0]
+  ;(want ?? box.value)?.focus()
+}
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key !== 'Escape' || props.persistent) return
   // Not mine to answer. A persistent dialog on top absorbs the press
   // rather than passing it down, which is the point of it being on top.
   if (openModals[openModals.length - 1] !== id) return
-
+  if (event.key === 'Tab') {
+    trapTab(event)
+    return
+  }
+  if (event.key !== 'Escape' || props.persistent) return
+  event.stopPropagation()
   emit('close')
+}
+
+// Tab cycles inside the dialog, the page behind it is not reachable.
+function trapTab(event: KeyboardEvent) {
+  const els = focusable()
+  if (!els.length) {
+    event.preventDefault()
+    return
+  }
+  const first = els[0]
+  const last = els[els.length - 1]
+  const active = document.activeElement
+  if (event.shiftKey && (active === first || !box.value?.contains(active))) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && (active === last || !box.value?.contains(active))) {
+    event.preventDefault()
+    first.focus()
+  }
 }
 
 onMounted(() => {
   openModals.push(id)
   document.addEventListener('keydown', onKeydown)
+  opener = document.activeElement
+  void nextTick(focusIn)
 })
 
 onUnmounted(() => {
   const at = openModals.indexOf(id)
   if (at !== -1) openModals.splice(at, 1)
   document.removeEventListener('keydown', onKeydown)
+  if (opener instanceof HTMLElement && document.contains(opener)) opener.focus()
 })
 </script>
 
 <template>
   <div class="modal-overlay" @mousedown="watchClickStart" @mouseup="confirmClickEnd">
-    <div class="modal" :class="size" role="dialog" aria-modal="true" @mousedown.stop @mouseup.stop>
-      <div class="modal-header">
+    <div
+      ref="box"
+      class="modal"
+      :class="size"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="headerId"
+      tabindex="-1"
+      @mousedown.stop
+      @mouseup.stop
+    >
+      <div :id="headerId" class="modal-header">
         <slot name="header"
           ><h3>{{ title }}</h3></slot
         >

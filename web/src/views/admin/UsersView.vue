@@ -76,15 +76,20 @@ async function open(u: AdminUser) {
   }
 }
 
+// act runs a change, then reads the list and the open account again.
+// The account read back is kept only if the dialog still shows it.
 async function act(what: () => Promise<unknown>, done: string) {
   busy.value = true
   try {
     await what()
     if (done) toast.success(done)
     await load()
-    if (editing.value) {
-      const res = await getUser(editing.value.user.id)
-      editing.value = { ...editing.value, user: res.user, owns: res.owns }
+    const id = editing.value?.user.id
+    if (id) {
+      const res = await getUser(id)
+      if (editing.value?.user.id === id) {
+        editing.value = { ...editing.value, user: res.user, owns: res.owns }
+      }
     }
   } catch (err) {
     toast.error(apiErrorMessage(err))
@@ -102,8 +107,16 @@ async function create() {
   }, 'Account created')
 }
 
-function setFlag(u: AdminUser, p: { admin?: boolean; disabled?: boolean }) {
-  return act(() => patchUser(u.id, p), '')
+// setFlag reads the box, and puts it back as the account says when the
+// server refused: the box is bound one way and would keep the refusal.
+async function setFlag(ev: Event, u: AdminUser, flag: 'admin' | 'disabled') {
+  const box = ev.target as HTMLInputElement
+  let applied = false
+  await act(async () => {
+    await patchUser(u.id, { [flag]: box.checked })
+    applied = true
+  }, '')
+  if (!applied) box.checked = flag === 'admin' ? u.admin : !u.is_active
 }
 
 async function setPassword() {
@@ -220,7 +233,7 @@ onMounted(load)
           :checked="editing.user.admin"
           type="checkbox"
           :disabled="busy || isSelf(editing.user)"
-          @change="setFlag(editing.user, { admin: ($event.target as HTMLInputElement).checked })"
+          @change="setFlag($event, editing.user, 'admin')"
         />
         Administrator
       </label>
@@ -229,7 +242,7 @@ onMounted(load)
           :checked="!editing.user.is_active"
           type="checkbox"
           :disabled="busy || isSelf(editing.user)"
-          @change="setFlag(editing.user, { disabled: ($event.target as HTMLInputElement).checked })"
+          @change="setFlag($event, editing.user, 'disabled')"
         />
         Disabled, cannot sign in
       </label>

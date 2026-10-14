@@ -269,6 +269,9 @@ const openGroups = ref(new Set<string>())
 watch(
   () => props.node.id,
   () => {
+    // Notes typed on the entity just left are saved before the panel
+    // moves on, the timer alone would find the state already reset.
+    if (notesState.value === 'dirty') void saveNotes()
     editing.value = false
     renaming.value = false
     unfolded.value = new Set()
@@ -432,6 +435,13 @@ async function rename() {
   }
 }
 
+// Escape gives the name up: the blur that follows the input's removal
+// then finds nothing changed.
+function cancelRename() {
+  title.value = props.node.label
+  renaming.value = false
+}
+
 const custom = ref<CustomRow[]>([])
 const removedCustom = ref<string[]>([])
 const customError = ref('')
@@ -510,17 +520,30 @@ function onNotes() {
 async function saveNotes() {
   if (notesState.value !== 'dirty') return
   notesState.value = 'saving'
+  const id = props.node.id
   try {
-    emit(
-      'changed',
-      await updateNode(props.sketchId, props.node.id, { metadata: { notes: notes.value } }),
-    )
-    notesState.value = 'saved'
+    const n = await updateNode(props.sketchId, id, { metadata: { notes: notes.value } })
+    emit('changed', n)
+    // The panel may show another entity by now, whose state this is not.
+    if (props.node.id === id) notesState.value = 'saved'
   } catch (err) {
-    notesState.value = 'dirty'
+    if (props.node.id === id) notesState.value = 'dirty'
     toast.error(apiErrorMessage(err))
   }
 }
+
+// The viewer closes on Escape without reaching the page, whose Escape
+// would clear the selection and take the whole panel with it.
+function onViewerKey(ev: KeyboardEvent) {
+  if (ev.key !== 'Escape') return
+  ev.stopPropagation()
+  viewing.value = null
+}
+
+watch(viewing, (v) => {
+  if (v) window.addEventListener('keydown', onViewerKey, true)
+  else window.removeEventListener('keydown', onViewerKey, true)
+})
 
 async function unlink(edgeId: string) {
   try {
@@ -533,6 +556,7 @@ async function unlink(edgeId: string) {
 
 onBeforeUnmount(() => {
   if (notesTimer) clearTimeout(notesTimer)
+  window.removeEventListener('keydown', onViewerKey, true)
 })
 </script>
 
@@ -548,7 +572,7 @@ onBeforeUnmount(() => {
           v-model="title"
           class="form-input rename"
           @keydown.enter.prevent="rename"
-          @keydown.escape="renaming = false"
+          @keydown.escape="cancelRename"
           @blur="rename"
         />
         <h3
@@ -880,29 +904,40 @@ onBeforeUnmount(() => {
         </li>
       </ul>
 
-      <div v-if="viewing" class="lightbox" @click.self="viewing = null">
-        <img v-if="viewKind(viewing) === 'image'" :src="viewing.url" :alt="viewing.name" />
-        <iframe
-          v-else-if="viewKind(viewing) === 'pdf'"
-          :src="viewing.url"
-          :title="viewing.name"
-          class="frame"
-        ></iframe>
-        <video v-else-if="viewKind(viewing) === 'video'" :src="viewing.url" controls></video>
-        <audio v-else-if="viewKind(viewing) === 'audio'" :src="viewing.url" controls></audio>
-        <MailViewer
-          v-else-if="viewKind(viewing) === 'mail' && viewMail"
-          :mail="viewMail"
-          :title="viewing.name"
-          :raw-url="viewing.url"
-        />
-        <pre v-else class="sheet">{{ viewText || 'Loading...' }}</pre>
-        <div class="lightbox-bar">
-          <span>{{ viewing.name }}</span>
-          <a :href="viewing.url + '?download=1'" class="btn btn-sm btn-secondary">Download</a>
-          <button class="btn btn-sm btn-secondary" @click="viewing = null">Close</button>
+      <!-- Teleported: inside the side panel's stacking context the viewer
+           sat under the top bar whatever its z-index. -->
+      <Teleport to="body">
+        <div
+          v-if="viewing"
+          class="lightbox"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="viewing.name"
+          @click.self="viewing = null"
+        >
+          <img v-if="viewKind(viewing) === 'image'" :src="viewing.url" :alt="viewing.name" />
+          <iframe
+            v-else-if="viewKind(viewing) === 'pdf'"
+            :src="viewing.url"
+            :title="viewing.name"
+            class="frame"
+          ></iframe>
+          <video v-else-if="viewKind(viewing) === 'video'" :src="viewing.url" controls></video>
+          <audio v-else-if="viewKind(viewing) === 'audio'" :src="viewing.url" controls></audio>
+          <MailViewer
+            v-else-if="viewKind(viewing) === 'mail' && viewMail"
+            :mail="viewMail"
+            :title="viewing.name"
+            :raw-url="viewing.url"
+          />
+          <pre v-else class="sheet">{{ viewText || 'Loading...' }}</pre>
+          <div class="lightbox-bar">
+            <span>{{ viewing.name }}</span>
+            <a :href="viewing.url + '?download=1'" class="btn btn-sm btn-secondary">Download</a>
+            <button class="btn btn-sm btn-secondary" @click="viewing = null">Close</button>
+          </div>
         </div>
-      </div>
+      </Teleport>
     </template>
   </div>
 </template>
@@ -1008,7 +1043,8 @@ onBeforeUnmount(() => {
 .lightbox {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  /* The dialog layer, above the top bar and the panels. */
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: center;

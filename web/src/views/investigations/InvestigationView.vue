@@ -39,7 +39,7 @@ import FormField from '@/components/FormField.vue'
 import LoadingBlock from '@/components/LoadingBlock.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
-import { timeAgo } from '@/composables/formatDate'
+import { timeAgo, timeUntil } from '@/composables/formatDate'
 import { useConfirm } from '@/composables/useConfirm'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -50,6 +50,7 @@ const { confirm } = useConfirm()
 const id = computed(() => String(route.params.id))
 
 const inv = ref<Investigation | null>(null)
+const error = ref('')
 const sketches = ref<Sketch[]>([])
 const members = ref<Member[]>([])
 const analyses = ref<Analysis[]>([])
@@ -117,8 +118,16 @@ async function load() {
     ])
     await loadInvitations()
   } catch (err) {
-    toast.error(apiErrorMessage(err))
+    if (inv.value) toast.error(apiErrorMessage(err))
+    else error.value = apiErrorMessage(err)
   }
+}
+
+// openSketch is the card as a mouse target, the title is the link. A
+// click on a button or link inside is theirs.
+function openSketch(ev: MouseEvent, s: Sketch) {
+  if ((ev.target as HTMLElement).closest('a, button')) return
+  void router.push(`/sketches/${s.id}`)
 }
 
 function initials(email: string): string {
@@ -174,11 +183,19 @@ async function loadInvitations() {
   }
 }
 
+// closeShare leaves nothing of one share for the next: the link shown
+// once is gone, the field and its suggestions are empty.
+function closeShare() {
+  sharing.value = false
+  inviteLink.value = null
+  shareEmail.value = ''
+  suggestions.value = []
+}
+
 async function share() {
   try {
     await addMember(id.value, shareEmail.value, shareRole.value)
-    sharing.value = false
-    shareEmail.value = ''
+    closeShare()
     members.value = await listMembers(id.value)
   } catch (err) {
     const status = (err as { response?: { status?: number } }).response?.status
@@ -224,11 +241,15 @@ async function makeOwner(m: Member) {
   }
 }
 
-async function changeRole(m: Member, r: Role) {
+// A refused role goes back to the one the member has: the select is
+// bound one way and would keep showing the refusal.
+async function changeRole(ev: Event, m: Member) {
+  const sel = ev.target as HTMLSelectElement
   try {
-    await setMemberRole(id.value, m.user_id, r)
+    await setMemberRole(id.value, m.user_id, sel.value as Role)
     members.value = await listMembers(id.value)
   } catch (err) {
+    sel.value = m.role
     toast.error(apiErrorMessage(err))
   }
 }
@@ -250,7 +271,9 @@ async function remove(m: Member) {
   }
 }
 
-async function setStatus(status: string) {
+async function setStatus(ev: Event) {
+  const sel = ev.target as HTMLSelectElement
+  const status = sel.value
   if (status !== 'active' && status !== 'archived') return
   if (!inv.value) return
   try {
@@ -260,6 +283,7 @@ async function setStatus(status: string) {
       status,
     })
   } catch (err) {
+    sel.value = inv.value.status
     toast.error(apiErrorMessage(err))
   }
 }
@@ -330,7 +354,15 @@ onMounted(load)
 </script>
 
 <template>
-  <LoadingBlock v-if="!inv" />
+  <div v-if="error" class="card">
+    <EmptyState title="The investigation could not be opened">
+      <p>{{ error }}</p>
+      <router-link class="btn btn-secondary" to="/investigations"
+        >Back to investigations</router-link
+      >
+    </EmptyState>
+  </div>
+  <LoadingBlock v-else-if="!inv" />
   <template v-else>
     <PageHeader :title="inv.name">
       <select
@@ -338,7 +370,7 @@ onMounted(load)
         class="form-select status"
         :value="inv.status"
         title="Status of the investigation"
-        @change="setStatus(($event.target as HTMLSelectElement).value)"
+        @change="setStatus"
       >
         <option value="active">Active</option>
         <option value="archived">Archived</option>
@@ -384,13 +416,10 @@ onMounted(load)
         :key="s.id"
         class="card sk"
         :class="{ archived: s.status === 'archived' }"
-        role="button"
-        tabindex="0"
-        @click="router.push(`/sketches/${s.id}`)"
-        @keydown.enter="router.push(`/sketches/${s.id}`)"
+        @click="openSketch($event, s)"
       >
         <div class="flex items-center gap-2">
-          <span class="name">{{ s.title }}</span>
+          <router-link class="name" :to="`/sketches/${s.id}`">{{ s.title }}</router-link>
           <span v-if="s.status === 'archived'" class="badge badge-neutral">archived</span>
           <button
             v-if="role === 'owner'"
@@ -456,7 +485,7 @@ onMounted(load)
                   v-if="canManage && m.role !== 'owner'"
                   class="form-select"
                   :value="m.role"
-                  @change="changeRole(m, ($event.target as HTMLSelectElement).value as Role)"
+                  @change="changeRole($event, m)"
                 >
                   <option value="admin">admin</option>
                   <option value="editor">editor</option>
@@ -491,7 +520,7 @@ onMounted(load)
             <tr v-for="i in invitations" :key="i.id">
               <td>{{ i.email }}</td>
               <td><StatusBadge :status="i.role" scope="role" /></td>
-              <td class="text-xs text-muted">expires {{ timeAgo(i.expires_at) }}</td>
+              <td class="text-xs text-muted">expires {{ timeUntil(i.expires_at) }}</td>
               <td class="text-right">
                 <button class="btn btn-sm btn-secondary" @click="revoke(i)">Revoke</button>
               </td>
@@ -562,7 +591,7 @@ onMounted(load)
       title="Share investigation"
       size="modal-w480"
       form
-      @close="((sharing = false), (inviteLink = null))"
+      @close="closeShare"
       @submit="share"
     >
       <div v-if="inviteLink" class="notice notice-info text-sm mb-3">
@@ -601,7 +630,7 @@ onMounted(load)
         </select>
       </FormField>
       <template #footer>
-        <button type="button" class="btn btn-secondary" @click="sharing = false">Cancel</button>
+        <button type="button" class="btn btn-secondary" @click="closeShare">Cancel</button>
         <button class="btn btn-primary">Share</button>
       </template>
     </BaseModal>
@@ -689,6 +718,8 @@ onMounted(load)
 
 .sk .name {
   font-weight: 600;
+  color: inherit;
+  text-decoration: none;
 }
 
 .sk .desc {

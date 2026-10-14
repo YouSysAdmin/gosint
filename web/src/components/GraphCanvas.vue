@@ -17,6 +17,7 @@ import { forceCollide, forceX, forceY } from 'd3-force'
 import ForceGraph from 'force-graph'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { GraphEdge, GraphNode } from '@/api/types'
+import { isModalOpen } from '@/components/BaseModal.vue'
 import { iconImage, inkOn } from '@/composables/iconImage'
 import { treeLayout } from '@/composables/treeLayout'
 import { useCatalogStore } from '@/stores/catalog'
@@ -967,6 +968,9 @@ onMounted(() => {
     .onRenderFramePost(afterFrame)
     .onEngineStop(settled)
 
+  // The watch below ran before the graph existed, so a viewer's canvas
+  // would still let its nodes be dragged.
+  graph.enableNodeDrag(props.canEdit)
   fresh = 0
   graph.graphData(toData())
 
@@ -993,6 +997,7 @@ onMounted(() => {
 
   window.addEventListener('keydown', onKey)
   window.addEventListener('keyup', onKeyUp)
+  window.addEventListener('blur', dropModes)
 })
 
 // New entities arrive unpinned beside their parent. The simulation is
@@ -1129,7 +1134,17 @@ watch(
 
 function typing(ev: KeyboardEvent): boolean {
   const t = ev.target as HTMLElement | null
-  return !!t?.closest('input, textarea, select, [contenteditable]')
+  return !!t?.closest('input, textarea, select, [contenteditable]') || isModalOpen()
+}
+
+// dropModes ends the link and box modes when the window loses the
+// keyboard: an Alt+Tab or Cmd+Tab takes the keyup with it, and the
+// overlay would stay up, taking every click.
+function dropModes() {
+  linking.value = false
+  dragging.value = null
+  boxHeld = false
+  if (!box.value) boxSelect.value = false
 }
 
 function onKey(ev: KeyboardEvent) {
@@ -1485,6 +1500,7 @@ onBeforeUnmount(() => {
   scheme.removeEventListener('change', onScheme)
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('keyup', onKeyUp)
+  window.removeEventListener('blur', dropModes)
   resize?.disconnect()
   graph?._destructor()
   graph = null

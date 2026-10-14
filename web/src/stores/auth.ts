@@ -2,6 +2,7 @@ import { storageRemovePrefix } from '@/composables/storage'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import * as authApi from '@/api/auth'
+import { isStatus } from '@/api/client'
 import type { Profile } from '@/api/types'
 
 // The signed-in account. loaded tells "not asked yet" from "nobody".
@@ -9,12 +10,14 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<Profile | null>(null)
   const loaded = ref(false)
 
+  // A failure other than a 401 keeps the account already known, so a
+  // refresh over a flaky network does not sign the person out.
   async function load(): Promise<Profile | null> {
     if (loaded.value) return user.value
     try {
       user.value = await authApi.me()
-    } catch {
-      user.value = null
+    } catch (err) {
+      if (isStatus(err, 401)) user.value = null
     }
     loaded.value = true
     return user.value

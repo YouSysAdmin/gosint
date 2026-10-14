@@ -25,8 +25,16 @@ function away(ev: MouseEvent) {
   if (el.value && !el.value.contains(ev.target as Node)) emit('close')
 }
 
-onMounted(() => setTimeout(() => document.addEventListener('mousedown', away, true), 0))
-onBeforeUnmount(() => document.removeEventListener('mousedown', away, true))
+// Deferred, so the click that opened the popover does not close it,
+// and cancelled when the popover is gone before the tick.
+let armed = 0
+onMounted(() => {
+  armed = window.setTimeout(() => document.addEventListener('mousedown', away, true), 0)
+})
+onBeforeUnmount(() => {
+  window.clearTimeout(armed)
+  document.removeEventListener('mousedown', away, true)
+})
 </script>
 
 <template>

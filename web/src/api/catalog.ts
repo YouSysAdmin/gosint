@@ -1,4 +1,4 @@
-import api from './client'
+import api, { readBlobError } from './client'
 import { multipart, type Download } from './sketches'
 import { fileNameOf } from '@/composables/download'
 import type {
@@ -120,8 +120,12 @@ export async function checkFlow(definition: FlowDefinition) {
 // Flows and templates move as files: a flow as JSON, several in one,
 // a template as its YAML, several with --- between them.
 async function fetchFile(url: string, fallback: string): Promise<Download> {
-  const r = await api.get<Blob>(url, { responseType: 'blob' })
-  return { blob: r.data, name: fileNameOf(r.headers['content-disposition'], fallback) }
+  try {
+    const r = await api.get<Blob>(url, { responseType: 'blob' })
+    return { blob: r.data, name: fileNameOf(r.headers['content-disposition'], fallback) }
+  } catch (err) {
+    throw await readBlobError(err)
+  }
 }
 
 export function exportFlow(id: string): Promise<Download> {

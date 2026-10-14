@@ -14,7 +14,7 @@ const emit = defineEmits<{
   (e: 'focus', id: string): void
   (e: 'toggle', id: string): void
   (e: 'selectAll', ids: string[]): void
-  (e: 'clear'): void
+  (e: 'unselect', ids: string[]): void
 }>()
 
 const catalog = useCatalogStore()
@@ -101,7 +101,10 @@ async function copy(n: GraphNode) {
                 :disabled="!shown.length"
                 @change="
                   allShown
-                    ? emit('clear')
+                    ? emit(
+                        'unselect',
+                        shown.map((n) => n.id),
+                      )
                     : emit(
                         'selectAll',
                         shown.map((n) => n.id),

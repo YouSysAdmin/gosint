@@ -29,6 +29,13 @@ const doc = ref<unknown>({})
 const state = ref<'saved' | 'dirty' | 'saving'>('saved')
 let timer: ReturnType<typeof setTimeout> | null = null
 
+// Every edit bumps rev, a save records what it sent: an edit typed
+// while a save is out is saved by the next round, never overwritten
+// by the first one finishing. One save is out at a time (inflight).
+let rev = 0
+let saved = 0
+let inflight: Promise<void> | null = null
+
 const entities = computed<MentionItem[]>(() =>
   props.nodes.map((n) => ({ id: n.id, label: n.label, type: n.type, sketch: props.sketchId })),
 )
@@ -38,10 +45,24 @@ async function loadList() {
   if (!current.value && list.value[0]) current.value = list.value[0].id
 }
 
+// open loads the picked analysis once the current one is saved. A load
+// overtaken by another pick changes nothing.
 async function open(id: string) {
   await flush()
-  analysis.value = id ? await getAnalysis(props.investigationId, id) : null
-  doc.value = analysis.value?.content ?? {}
+  if (current.value !== id) return
+  let next: Analysis | null = null
+  if (id) {
+    try {
+      next = await getAnalysis(props.investigationId, id)
+    } catch (err) {
+      toast.error(apiErrorMessage(err))
+    }
+    if (current.value !== id) return
+  }
+
+  analysis.value = next
+  doc.value = next?.content ?? {}
+  saved = rev
   state.value = 'saved'
 }
 
@@ -58,22 +79,46 @@ async function fresh() {
 
 function changed(next: unknown) {
   doc.value = next
+  rev++
   state.value = 'dirty'
   if (timer) clearTimeout(timer)
   timer = setTimeout(flush, 1000)
 }
 
-async function flush() {
-  if (state.value !== 'dirty' || !analysis.value) return
+// flush saves until nothing is left unsaved, joining a save already
+// out instead of starting a second one.
+function flush(): Promise<void> {
+  if (timer) clearTimeout(timer)
+  timer = null
+  if (inflight) return inflight
+  inflight = (async () => {
+    while (analysis.value && rev !== saved) {
+      if (!(await save())) break
+    }
+  })().finally(() => (inflight = null))
+
+  return inflight
+}
+
+// save sends the document as it is now and reports whether it landed.
+// An edit made meanwhile leaves the state dirty for the next round.
+async function save(): Promise<boolean> {
+  const a = analysis.value
+  if (!a) return false
+  const sent = rev
   state.value = 'saving'
   try {
-    analysis.value = await saveAnalysis(props.investigationId, analysis.value.id, {
-      content: doc.value,
-    })
-    state.value = 'saved'
+    const next = await saveAnalysis(props.investigationId, a.id, { content: doc.value })
+    if (analysis.value?.id === a.id) analysis.value = next
+    saved = sent
+    state.value = rev === sent ? 'saved' : 'dirty'
+
+    return true
   } catch (err) {
     state.value = 'dirty'
     toast.error(apiErrorMessage(err))
+
+    return false
   }
 }
 
@@ -82,7 +127,7 @@ function mention(nodeId: string, sketchId: string) {
   else void router.push({ path: `/sketches/${sketchId}`, query: { focus: nodeId } })
 }
 
-watch(current, (id) => open(id).catch((err) => toast.error(apiErrorMessage(err))))
+watch(current, (id) => void open(id))
 
 onMounted(() => loadList().catch((err) => toast.error(apiErrorMessage(err))))
 

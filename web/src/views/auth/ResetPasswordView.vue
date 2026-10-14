@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { resetConfirm } from '@/api/auth'
 import { apiErrorMessage } from '@/api/client'
@@ -15,6 +15,7 @@ const again = ref('')
 const busy = ref(false)
 const error = ref('')
 const done = ref(false)
+let leave: ReturnType<typeof setTimeout> | null = null
 
 // Mirrors the server rule (min 8) so a mismatch is caught before a
 // round trip.
@@ -31,13 +32,17 @@ async function submit() {
   try {
     await resetConfirm(token.value, password.value)
     done.value = true
-    setTimeout(() => router.push('/login'), 2500)
+    leave = setTimeout(() => void router.push('/login'), 2500)
   } catch (err) {
     error.value = apiErrorMessage(err)
   } finally {
     busy.value = false
   }
 }
+
+onBeforeUnmount(() => {
+  if (leave) clearTimeout(leave)
+})
 </script>
 
 <template>

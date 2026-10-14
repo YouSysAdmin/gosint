@@ -20,9 +20,13 @@ const current = computed<LlmModel | null>(
     null,
 )
 
+// A failed load still counts as loaded, so the "no model" hint shows.
 async function load() {
-  models.value = await listModels()
-  loaded.value = true
+  try {
+    models.value = await listModels()
+  } finally {
+    loaded.value = true
+  }
 }
 
 function pick(id: string) {

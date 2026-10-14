@@ -6,6 +6,7 @@ import { deleteEdges, updateEdge } from '@/api/sketches'
 import type { GraphEdge, GraphNode } from '@/api/types'
 import { describeOrigin, originDate, originOf } from '@/composables/provenance'
 import { normalizeLabel } from '@/composables/relationLabels'
+import { useConfirm } from '@/composables/useConfirm'
 import { useCatalogStore } from '@/stores/catalog'
 import { useNotificationStore } from '@/stores/notification'
 
@@ -23,7 +24,9 @@ const emit = defineEmits<{
 
 const catalog = useCatalogStore()
 const toast = useNotificationStore()
+const { confirm } = useConfirm()
 const label = ref(props.edge.label)
+const busy = ref(false)
 const origin = computed(() => originOf(props.edge.properties))
 
 // The relationship's own properties, its origin shown apart.
@@ -42,22 +45,38 @@ function end(id: string): GraphNode | undefined {
 
 async function save() {
   const next = normalizeLabel(label.value)
-  if (!next || next === props.edge.label) return
+  if (!next || next === props.edge.label || busy.value) return
+  busy.value = true
   try {
     await updateEdge(props.sketchId, props.edge.id, next)
     toast.success('Relationship updated')
     emit('changed')
   } catch (err) {
     toast.error(apiErrorMessage(err))
+  } finally {
+    busy.value = false
   }
 }
 
 async function remove() {
+  if (busy.value) return
+  const [from, to] = [props.edge.source, props.edge.target].map((id) => end(id)?.label ?? 'unknown')
+  if (
+    !(await confirm({
+      title: 'Delete relationship',
+      message: `Delete the relationship ${props.edge.label} between ${from} and ${to}?`,
+      variant: 'danger',
+    }))
+  )
+    return
+  busy.value = true
   try {
     await deleteEdges(props.sketchId, [props.edge.id])
     emit('changed')
   } catch (err) {
     toast.error(apiErrorMessage(err))
+  } finally {
+    busy.value = false
   }
 }
 </script>
@@ -67,7 +86,10 @@ async function remove() {
     <div class="text-sm text-muted mb-1">Relationship</div>
     <form v-if="canEdit" class="flex gap-2 mb-4" @submit.prevent="save">
       <input v-model="label" class="form-input code-font" />
-      <button class="btn btn-sm btn-primary" :disabled="normalizeLabel(label) === edge.label">
+      <button
+        class="btn btn-sm btn-primary"
+        :disabled="busy || normalizeLabel(label) === edge.label"
+      >
         Save
       </button>
     </form>
@@ -109,7 +131,7 @@ async function remove() {
       </template>
     </dl>
 
-    <button v-if="canEdit" class="btn btn-sm btn-danger mt-4" @click="remove">
+    <button v-if="canEdit" class="btn btn-sm btn-danger mt-4" :disabled="busy" @click="remove">
       Delete the relationship
     </button>
   </div>

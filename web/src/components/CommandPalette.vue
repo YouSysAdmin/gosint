@@ -8,6 +8,8 @@ import { searchEntities, type SearchHit } from '@/api/catalog'
 import { listInvestigations } from '@/api/investigations'
 import { listSketches } from '@/api/sketches'
 import type { Investigation, Sketch } from '@/api/types'
+import { isModalOpen } from '@/components/BaseModal.vue'
+import { useAuthStore } from '@/stores/auth'
 
 interface Item {
   id: string
@@ -18,6 +20,7 @@ interface Item {
 }
 
 const router = useRouter()
+const auth = useAuthStore()
 const open = ref(false)
 const query = ref('')
 const cursor = ref(0)
@@ -27,17 +30,16 @@ const sketches = ref<Sketch[]>([])
 
 // Entities matching the query, asked of the server a moment after the
 // typing stops, from two characters on. A late answer to an older
-// query is dropped.
+// query is dropped, and the older query's hits go at once, or Enter
+// could jump to one of them.
 const hits = ref<SearchHit[]>([])
 let timer = 0
 let asked = 0
 watch(query, (q) => {
   window.clearTimeout(timer)
+  hits.value = []
   const text = q.trim()
-  if (text.length < 2) {
-    hits.value = []
-    return
-  }
+  if (text.length < 2) return
   const n = ++asked
   timer = window.setTimeout(async () => {
     try {
@@ -49,7 +51,7 @@ watch(query, (q) => {
   }, 150)
 })
 
-const pages: Item[] = [
+const allPages: Item[] = [
   { id: 'p-inv', group: 'Pages', title: 'Investigations', hint: '', to: '/investigations' },
   { id: 'p-flows', group: 'Pages', title: 'Flows', hint: '', to: '/flows' },
   { id: 'p-newflow', group: 'Pages', title: 'New flow', hint: '', to: '/flows/new' },
@@ -72,6 +74,10 @@ const pages: Item[] = [
   },
 ]
 
+// The administration page is offered to administrators only, the
+// router sends anyone else back without a word.
+const pages = computed(() => allPages.filter((p) => !p.to.startsWith('/admin') || auth.user?.admin))
+
 const items = computed<Item[]>(() => {
   const invName = new Map(investigations.value.map((i) => [i.id, i.name]))
   return [
@@ -89,7 +95,7 @@ const items = computed<Item[]>(() => {
       hint: invName.get(s.investigation_id) ?? '',
       to: `/sketches/${s.id}`,
     })),
-    ...pages,
+    ...pages.value,
     ...hits.value.map((h) => ({
       id: 'e-' + h.id,
       group: 'Entities',
@@ -146,12 +152,16 @@ function onKey(ev: KeyboardEvent) {
   if ((ev.metaKey || ev.ctrlKey) && (ev.key === 'j' || ev.key === 'J')) {
     ev.preventDefault()
     if (open.value) open.value = false
-    else void show()
+    // Under a dialog the palette would open behind it.
+    else if (!isModalOpen()) void show()
     return
   }
   if (!open.value) return
-  if (ev.key === 'Escape') open.value = false
-  else if (ev.key === 'ArrowDown') {
+  if (ev.key === 'Escape') {
+    // The page's own Escape (a cleared selection) is not meant.
+    ev.stopPropagation()
+    open.value = false
+  } else if (ev.key === 'ArrowDown') {
     ev.preventDefault()
     cursor.value = Math.min(cursor.value + 1, shown.value.length - 1)
   } else if (ev.key === 'ArrowUp') {
@@ -202,8 +212,9 @@ defineExpose({ show })
 .palette-overlay {
   position: fixed;
   inset: 0;
-  z-index: 90;
-  background: rgba(0, 0, 0, 0.35);
+  /* Above a dialog (1000), under the toasts (2000). */
+  z-index: 1500;
+  background: var(--overlay, rgba(0, 0, 0, 0.35));
   display: flex;
   justify-content: center;
   padding-top: 12vh;

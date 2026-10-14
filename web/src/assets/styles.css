@@ -19,6 +19,9 @@
 /* --------- Light Theme (default) --------- */
 :root,
 [data-theme='light'] {
+  /* Native widgets (scrollbars, select popups, autofill) follow the
+     chosen theme, not the OS. */
+  color-scheme: light;
   /* Not a hue ramp: 50-300 are TINT SURFACES and 500-900 are SOLID
      INK, with 400 the only step in between. Nothing may pick a step
      out of the middle expecting a readable fill.
@@ -146,6 +149,7 @@
 
 /* --------- Dark Theme --------- */
 [data-theme='dark'] {
+  color-scheme: dark;
   /* THE RAMP INVERTS. 600 is the button fill in both themes, so on a
      near-black page it has to be near-white - which is the template's
      dark primary exactly, and why --text-on-primary flips with it.
@@ -276,7 +280,6 @@
 
   --transition: 150ms ease;
   --transition-slow: 250ms ease;
-  color-scheme: light dark;
 }
 
 /* --------- Reset --------- */

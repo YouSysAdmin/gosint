@@ -142,9 +142,15 @@ async function submit() {
         size: look.size ?? undefined,
       }),
     })
+    // The entity exists once addNode answered: a failed link is reported
+    // and the dialog still closes, or a retry would add it twice.
     if (props.linkTo && link.value) {
       const [from, to] = outward.value ? [props.linkTo, n] : [n, props.linkTo]
-      await addEdge(props.sketchId, from.id, to.id, normalizeLabel(relation.value))
+      try {
+        await addEdge(props.sketchId, from.id, to.id, normalizeLabel(relation.value))
+      } catch (err) {
+        toast.error('Entity added, the link failed: ' + apiErrorMessage(err))
+      }
     }
 
     emit('added', n)

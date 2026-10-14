@@ -65,6 +65,7 @@ const { models, current: model, load: loadModels, pick } = useLlmModels()
 const ioInput = ref('')
 const ioOutput = ref('')
 const generating = ref(false)
+const saving = ref(false)
 
 // fieldsOf lists a type's field names, the primary one first.
 function fieldsOf(type: string): string[] {
@@ -109,7 +110,7 @@ watch(ioOutput, (type) => {
 // generate asks the model for a draft and puts it in the editor, with
 // what the parser still refuses shown above, to finish by hand.
 async function generate() {
-  if (!ask.value.trim()) return
+  if (generating.value || !ask.value.trim()) return
   generating.value = true
   problem.value = ''
   try {
@@ -127,6 +128,8 @@ async function generate() {
 const mine = computed(() => !id.value || owner.value === auth.user?.id)
 
 async function save() {
+  if (saving.value) return
+  saving.value = true
   problem.value = ''
   try {
     const t = await saveTemplate(id.value, source.value, isPublic.value)
@@ -134,6 +137,8 @@ async function save() {
     if (!id.value) await router.replace(`/templates/${t.id}`)
   } catch (err) {
     problem.value = apiErrorMessage(err)
+  } finally {
+    saving.value = false
   }
 }
 
@@ -193,7 +198,7 @@ onMounted(async () => {
 <template>
   <PageHeader :title="id ? 'Transform template' : 'New transform'">
     <button v-if="id && mine" class="btn btn-danger" @click="remove">Delete</button>
-    <button v-if="mine" class="btn btn-primary" @click="save">Save</button>
+    <button v-if="mine" class="btn btn-primary" :disabled="saving" @click="save">Save</button>
   </PageHeader>
 
   <div v-if="problem" class="notice notice-danger mb-4">{{ problem }}</div>

@@ -56,6 +56,22 @@ export function timeAgo(value?: string | null, empty = 'never'): string {
 }
 
 /**
+ * How long until, in words: the mirror of timeAgo for a moment ahead.
+ * A moment already passed reads "soon", past a week it is the date.
+ */
+export function timeUntil(value?: string | null, empty = 'never'): string {
+  if (!value) return empty
+
+  const seconds = Math.max(0, (new Date(value).getTime() - Date.now()) / 1000)
+  if (seconds < 90) return 'soon'
+  if (seconds < 3600) return `in ${Math.round(seconds / 60)} minutes`
+  if (seconds < 86400) return `in ${Math.round(seconds / 3600)} hours`
+  if (seconds < 604800) return `in ${Math.round(seconds / 86400)} days`
+
+  return formatTimeParts(value, { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+/**
  * Whether a moment has passed. Missing is NOT past - an invitation with
  * no expiry never expires, and reading it as expired would hide a live
  * one.

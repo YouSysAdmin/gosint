@@ -69,8 +69,12 @@ async function save() {
 async function remove(k: VaultKey) {
   if (!(await confirm({ title: 'Delete secret', message: `Delete ${k.name}?`, variant: 'danger' })))
     return
-  await deleteKey(k.id)
-  await load()
+  try {
+    await deleteKey(k.id)
+    await load()
+  } catch (err) {
+    toast.error(apiErrorMessage(err))
+  }
 }
 
 onMounted(() =>

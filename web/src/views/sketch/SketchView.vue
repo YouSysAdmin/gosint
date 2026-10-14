@@ -71,6 +71,7 @@ import type {
   Sketch,
 } from '@/api/types'
 import GraphCanvas, { type Point } from '@/components/GraphCanvas.vue'
+import { isModalOpen } from '@/components/BaseModal.vue'
 import LoadingBlock from '@/components/LoadingBlock.vue'
 import MenuButton from '@/components/MenuButton.vue'
 import ChatPanel from '@/components/sketch/ChatPanel.vue'
@@ -898,10 +899,17 @@ function stepsOf(s: Scan): { id: string; text: string; failed: boolean }[] {
 }
 
 // Delete removes the selection, Escape clears it, unless a field or a
-// dialog has the keyboard.
+// dialog has the keyboard. isModalOpen covers the dialogs this page does
+// not own, the confirm among them: Backspace under "Clear the sketch?"
+// once opened the delete dialog on top of it.
 function onKey(ev: KeyboardEvent) {
   const t = ev.target as HTMLElement | null
-  if (dialog.value || quick.value || t?.closest('input, textarea, select, [contenteditable]'))
+  if (
+    dialog.value ||
+    quick.value ||
+    isModalOpen() ||
+    t?.closest('input, textarea, select, [contenteditable]')
+  )
     return
   if ((ev.key === 'Delete' || ev.key === 'Backspace') && canEdit.value && selected.value.size) {
     ev.preventDefault()
@@ -958,6 +966,7 @@ function onScan(s: Scan) {
 const live = ref<{ name: string; kind: string; at: number } | null>(null)
 let reloadTimer = 0
 let liveTimer = 0
+let focusTimer = 0
 
 function onGraph(g: GraphChange) {
   if (g.by === auth.user?.id) return
@@ -984,7 +993,7 @@ onMounted(async () => {
   // A link from an analysis arrives with the entity to show.
   const want = route.query.focus
   if (typeof want === 'string' && nodes.value.some((n) => n.id === want)) {
-    setTimeout(() => focus(want), 700)
+    focusTimer = window.setTimeout(() => focus(want), 700)
     void router.replace({ query: {} })
   }
 })
@@ -996,6 +1005,7 @@ onBeforeUnmount(() => {
   events?.close()
   window.clearTimeout(liveTimer)
   window.clearTimeout(reloadTimer)
+  window.clearTimeout(focusTimer)
   window.removeEventListener('keydown', onKey)
 })
 </script>
@@ -1168,7 +1178,7 @@ onBeforeUnmount(() => {
           @focus="focusFromList"
           @toggle="toggle"
           @select-all="(ids) => selectMany(ids, false)"
-          @clear="clearSelection"
+          @unselect="unselectMany"
         />
         <EdgesTable
           v-else-if="view === 'relationships'"

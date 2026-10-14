@@ -100,7 +100,9 @@ export function fromProperties(fields: TypeField[], props: Record<string, unknow
 }
 
 // patch is what changed between two fillings of the form. A cleared
-// field becomes null, which the server's merge stores as cleared.
+// field becomes null, which the server's merge stores as cleared. The
+// two sides are compared as text, so a number typed back as it was is
+// no change.
 export function patch(
   fields: TypeField[],
   before: FormValues,
@@ -110,7 +112,7 @@ export function patch(
   for (const f of fields) {
     const was = before[f.name] ?? ''
     const now = after[f.name] ?? ''
-    if (was === now) continue
+    if (String(was) === String(now)) continue
     out[f.name] = now === '' ? null : convert(f, now)
   }
 

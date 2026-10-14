@@ -1,4 +1,4 @@
-import api from './client'
+import api, { readBlobError } from './client'
 import { fileNameOf } from '@/composables/download'
 import type { Graph, GraphEdge, GraphNode, ImportResult, LogEntry, Scan, Sketch } from './types'
 
@@ -165,15 +165,7 @@ export async function download(url: string, body: unknown): Promise<Download> {
     const r = await api.post<Blob>(url, body, { responseType: 'blob' })
     return { blob: r.data, name: fileNameOf(r.headers['content-disposition'], 'export.json') }
   } catch (err) {
-    const data = (err as { response?: { data?: unknown } }).response?.data
-    if (data instanceof Blob) {
-      try {
-        ;(err as { response: { data: unknown } }).response.data = JSON.parse(await data.text())
-      } catch {
-        // Not JSON, the status alone tells the story.
-      }
-    }
-    throw err
+    throw await readBlobError(err)
   }
 }
 

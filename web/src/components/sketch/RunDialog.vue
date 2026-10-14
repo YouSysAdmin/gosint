@@ -20,8 +20,10 @@ const flows = ref<Flow[]>([])
 const stored = ref(new Set<string>())
 const loading = ref(true)
 const picked = ref<Transform | null>(null)
-const params = ref<Record<string, string>>({})
+// A number input yields a number, the server takes every param as text.
+const params = ref<Record<string, string | number>>({})
 const filter = ref('')
+const busy = ref(false)
 
 const shown = computed(() =>
   transforms.value.filter(
@@ -34,7 +36,7 @@ onMounted(async () => {
   try {
     const [e, f, k] = await Promise.all([
       listTransforms(type.value),
-      listFlows(type.value),
+      listFlows(type.value).catch(() => []),
       listKeys().catch(() => []),
     ])
     transforms.value = e
@@ -71,8 +73,10 @@ function choose(e: Transform) {
 const ids = computed(() => props.nodes.map((n) => n.id))
 
 async function run() {
-  if (!picked.value) return
-  const given = Object.fromEntries(Object.entries(params.value).filter(([, v]) => v !== ''))
+  if (!picked.value || busy.value) return
+  const given: Record<string, string> = {}
+  for (const [k, v] of Object.entries(params.value)) if (v !== '') given[k] = String(v)
+  busy.value = true
   try {
     if (picked.value.template_id)
       await launchTemplate(props.sketchId, picked.value.template_id, ids.value, given)
@@ -81,16 +85,22 @@ async function run() {
     emit('launched')
   } catch (err) {
     toast.error(apiErrorMessage(err))
+  } finally {
+    busy.value = false
   }
 }
 
 async function runFlow(f: Flow) {
+  if (busy.value) return
+  busy.value = true
   try {
     await launchFlow(props.sketchId, f.id, ids.value)
     toast.success(`flow ${f.name} started`)
     emit('launched')
   } catch (err) {
     toast.error(apiErrorMessage(err))
+  } finally {
+    busy.value = false
   }
 }
 </script>
@@ -124,7 +134,13 @@ async function runFlow(f: Flow) {
       <template v-if="flows.length">
         <h4 class="mt-4 mb-2">Flows</h4>
         <div class="choices">
-          <button v-for="f in flows" :key="f.id" class="choice" @click="runFlow(f)">
+          <button
+            v-for="f in flows"
+            :key="f.id"
+            class="choice"
+            :disabled="busy"
+            @click="runFlow(f)"
+          >
             <span class="fw-medium">{{ f.name }}</span>
             <span class="text-sm text-muted">{{ f.definition.steps.length }} steps</span>
           </button>
@@ -174,7 +190,7 @@ async function runFlow(f: Flow) {
       </template>
       <div class="flex gap-2 justify-end mt-4">
         <button type="button" class="btn btn-secondary" @click="picked = null">Back</button>
-        <button class="btn btn-primary">Run</button>
+        <button class="btn btn-primary" :disabled="busy">Run</button>
       </div>
     </form>
   </BaseModal>

@@ -194,11 +194,15 @@ async function loadCatalog() {
 
 watch(() => props.nodes, loadCatalog)
 
+// armed is the timer arming the listeners, cleared when the menu goes
+// before it fires, or the listeners would outlive the menu.
+let armed = 0
+
 onMounted(() => {
   // Deferred, so the click that opened the menu does not close it. In
   // the capture phase, since the canvas stops a mousedown from
   // bubbling and the menu would never see it.
-  setTimeout(() => {
+  armed = window.setTimeout(() => {
     document.addEventListener('mousedown', away, true)
     document.addEventListener('keydown', key)
   }, 0)
@@ -218,6 +222,7 @@ onMounted(() => {
 const first = ref<HTMLInputElement | null>(null)
 
 onBeforeUnmount(() => {
+  window.clearTimeout(armed)
   sizer?.disconnect()
   document.removeEventListener('mousedown', away, true)
   document.removeEventListener('keydown', key)

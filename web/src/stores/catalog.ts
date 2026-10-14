@@ -9,11 +9,17 @@ export const useCatalogStore = defineStore('catalog', () => {
   const categories = ref<TypeCategory[]>([])
   let loading: Promise<void> | null = null
 
+  // A failed read is forgotten, so the next caller asks again.
   function load(): Promise<void> {
-    loading ??= listTypes().then((r) => {
-      types.value = r.types
-      categories.value = r.categories
-    })
+    loading ??= listTypes()
+      .then((r) => {
+        types.value = r.types
+        categories.value = r.categories
+      })
+      .catch((e) => {
+        loading = null
+        throw e
+      })
     return loading
   }
 

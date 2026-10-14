@@ -24,6 +24,13 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'imported'): void }>()
 const toast = useNotificationStore()
 const catalog = useCatalogStore()
 const text = ref('')
+const rows = ref<(Detection & { include: boolean })[]>([])
+const result = ref<ImportResult | null>(null)
+const busy = ref(false)
+const passphrase = ref('')
+
+// MAX_LINES is what one recognition sends, the rest of the text waits.
+const MAX_LINES = 10000
 
 // A table: the file, its preview, and the mapping drawn over it. Each
 // block is one entity a row makes, with a column per field, and the
@@ -47,10 +54,19 @@ function primaryOf(type: string): string {
   return catalog.type(type)?.fields.find((f) => f.primary)?.name ?? ''
 }
 
+// pickedFile takes the file out of a file input and clears the input,
+// so the same file picked again fires a change event.
+function pickedFile(ev: Event): File | undefined {
+  const el = ev.target as HTMLInputElement
+  const file = el.files?.[0]
+  el.value = ''
+  return file
+}
+
 // pickTable previews the file and drafts a block per column the server
 // recognized, the column on the type's main field.
 async function pickTable(ev: Event) {
-  const file = (ev.target as HTMLInputElement).files?.[0]
+  const file = pickedFile(ev)
   if (!file) return
   busy.value = true
   try {
@@ -93,11 +109,22 @@ function pickField(b: Block, ev: Event) {
   el.value = ''
 }
 
+// removeBlock drops the links touching the block and renumbers the
+// rest. A link left joining a block to itself goes too, and one block
+// alone has no link to draw.
 function removeBlock(i: number) {
   blocks.value.splice(i, 1)
-  links.value = links.value
-    .filter((l) => l.from !== i && l.to !== i)
-    .map((l) => ({ ...l, from: l.from > i ? l.from - 1 : l.from, to: l.to > i ? l.to - 1 : l.to }))
+  links.value =
+    blocks.value.length < 2
+      ? []
+      : links.value
+          .filter((l) => l.from !== i && l.to !== i)
+          .map((l) => ({
+            ...l,
+            from: l.from > i ? l.from - 1 : l.from,
+            to: l.to > i ? l.to - 1 : l.to,
+          }))
+          .filter((l) => l.from !== l.to)
 }
 
 // retype keeps a column on the new type's main field when the old one
@@ -145,10 +172,6 @@ function leaveTable() {
   blocks.value = []
   links.value = []
 }
-const rows = ref<(Detection & { include: boolean })[]>([])
-const result = ref<ImportResult | null>(null)
-const busy = ref(false)
-const passphrase = ref('')
 
 const lines = computed(() =>
   text.value
@@ -157,10 +180,12 @@ const lines = computed(() =>
     .filter(Boolean),
 )
 
+const sent = computed(() => Math.min(lines.value.length, MAX_LINES))
+
 async function analyze() {
   busy.value = true
   try {
-    rows.value = (await detect(lines.value.slice(0, 10000))).map((d) => ({
+    rows.value = (await detect(lines.value.slice(0, MAX_LINES))).map((d) => ({
       ...d,
       include: !d.error,
     }))
@@ -181,23 +206,21 @@ async function importRows() {
 // An export file goes to the server as it is, plain or encrypted with
 // its passphrase, and is merged into this sketch.
 async function importFile(ev: Event) {
-  const file = (ev.target as HTMLInputElement).files?.[0]
+  const file = pickedFile(ev)
   if (!file) return
   await run(() => importSketchFile(props.sketchId, file, passphrase.value))
 }
 
 async function importReport(ev: Event) {
-  const file = (ev.target as HTMLInputElement).files?.[0]
+  const file = pickedFile(ev)
   if (!file) return
-  const xml = await file.text()
-  await run(() => importNmap(props.sketchId, xml))
+  await run(async () => importNmap(props.sketchId, await file.text()))
 }
 
 async function importNucleiReport(ev: Event) {
-  const file = (ev.target as HTMLInputElement).files?.[0]
+  const file = pickedFile(ev)
   if (!file) return
-  const report = await file.text()
-  await run(() => importNuclei(props.sketchId, report))
+  await run(async () => importNuclei(props.sketchId, await file.text()))
 }
 
 async function run(fn: () => Promise<ImportResult>) {
@@ -310,6 +333,10 @@ async function run(fn: () => Promise<ImportResult>) {
         rows="10"
         placeholder="example.com&#10;8.8.8.8&#10;jane@example.com"
       />
+      <p v-if="lines.length > MAX_LINES" class="notice notice-warning text-sm mt-2">
+        Only the first {{ MAX_LINES }} of {{ lines.length }} values are recognized at once, the rest
+        waits for another round.
+      </p>
       <p class="text-secondary mt-4 mb-2">
         Or an export of a sketch, merged into this one. An encrypted export needs its passphrase
         first.
@@ -321,17 +348,32 @@ async function run(fn: () => Promise<ImportResult>) {
         placeholder="Passphrase of an encrypted export"
         autocomplete="off"
       />
-      <input type="file" accept=".json,.gosint,application/json" @change="importFile" />
+      <input
+        type="file"
+        accept=".json,.gosint,application/json"
+        :disabled="busy"
+        @change="importFile"
+      />
       <p class="text-secondary mt-4 mb-2">
         Or an nmap XML report (<code>nmap -oX</code>): its hosts, open ports and names.
       </p>
-      <input type="file" accept=".xml,text/xml,application/xml" @change="importReport" />
+      <input
+        type="file"
+        accept=".xml,text/xml,application/xml"
+        :disabled="busy"
+        @change="importReport"
+      />
       <p class="text-secondary mt-4 mb-2">
         Or a nuclei report (<code>nuclei -jsonl</code> or <code>-json-export</code>): each result an
         unverified finding under the site or host it was found on, coloured by severity, with the
         CVEs it names.
       </p>
-      <input type="file" accept=".jsonl,.json,application/json" @change="importNucleiReport" />
+      <input
+        type="file"
+        accept=".jsonl,.json,application/json"
+        :disabled="busy"
+        @change="importNucleiReport"
+      />
       <p class="text-secondary mt-4 mb-2">
         Or a table (CSV or XLSX, the first sheet): you map its columns to entities and draw the
         relationships between them, one set per row.
@@ -339,6 +381,7 @@ async function run(fn: () => Promise<ImportResult>) {
       <input
         type="file"
         accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        :disabled="busy"
         @change="pickTable"
       />
     </template>
@@ -386,7 +429,7 @@ async function run(fn: () => Promise<ImportResult>) {
         :disabled="!lines.length || busy"
         @click="analyze"
       >
-        Recognize {{ lines.length }} values
+        Recognize {{ sent }} values
       </button>
       <button v-else-if="!result" class="btn btn-primary" :disabled="busy" @click="importRows">
         Import {{ rows.filter((r) => r.include).length }}
