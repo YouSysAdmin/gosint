@@ -254,7 +254,10 @@ virtualenv outside the system trees, under a home directory for example,
 has to be added as a path the script may read. The network is not limited.
 
 A confined script that touches what it may not gets a permission error
-from the system, which shows up in the stderr tail of the scan log.
+from the system, which shows up in the stderr tail of the scan log. A
+path added on the Tools page that this node does not have is reported
+in the scan log before the script runs, and the server's log says at
+start when the node cannot confine scripts at all.
 
 {{< callout type="warning" title="Without the sandbox, a script is code the server runs" >}}
 On macOS, Windows and a Linux kernel without Landlock, a script runs as the

@@ -24,6 +24,7 @@ import (
 	"github.com/yousysadmin/gosint/internal/core/mailer"
 	"github.com/yousysadmin/gosint/internal/core/oidc"
 	"github.com/yousysadmin/gosint/internal/core/release"
+	"github.com/yousysadmin/gosint/internal/core/sandbox"
 	"github.com/yousysadmin/gosint/internal/core/tlsconf"
 	"github.com/yousysadmin/gosint/internal/core/tool"
 	"github.com/yousysadmin/gosint/internal/core/transform"
@@ -180,6 +181,10 @@ func RunNode(ctx context.Context, cfg *env.Config, opts NodeOptions) error {
 
 		rt.Transforms.SetSource(files.Transforms)
 		log.Info("transform files", "dir", dir, "loaded", len(files.Transforms()))
+
+		if !sandbox.Supported() {
+			log.Warn("script sandbox unsupported on this node, transform file scripts run unconfined unless switched on")
+		}
 	}
 
 	if p, ok := db.(*postgres.Postgres); ok {
