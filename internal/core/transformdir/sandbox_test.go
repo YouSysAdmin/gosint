@@ -47,7 +47,8 @@ try own 'echo x > ./own.txt'
 
 // A confined script reads the system, its own directory and what the
 // administrator lets through, writes only its scratch directory, and
-// never the server's files or its environment.
+// never the server's files or its environment. A path this node lacks
+// is said in the log.
 func TestAConfinedScriptReachesOnlyWhatItIsGiven(t *testing.T) {
 	if !sandbox.Supported() {
 		t.Skip("no Landlock on this system")
@@ -66,13 +67,14 @@ func TestAConfinedScriptReachesOnlyWhatItIsGiven(t *testing.T) {
 	s := newSketch(t)
 	in := s.node("domain", map[string]any{"domain": "example.com"})
 
-	tools := tool.Settings{tool.ScriptsName: {ReadPaths: []string{extra}}}
+	tools := tool.Settings{tool.ScriptsName: {ReadPaths: []string{extra, "/nowhere/gosint-wordlists"}}}
 	if err := s.runWith(d.Transforms()[0], tools, in); err != nil {
 		t.Fatal(err)
 	}
 
 	joined := strings.Join(s.log, "\n")
-	for _, want := range []string{"secret refused", "extra allowed", "parent refused", "scratch allowed", "own refused"} {
+	for _, want := range []string{"secret refused", "extra allowed", "parent refused", "scratch allowed", "own refused",
+		"/nowhere/gosint-wordlists is not on this node"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("log lacks %q:\n%s", want, joined)
 		}

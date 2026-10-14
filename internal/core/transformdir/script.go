@@ -174,6 +174,14 @@ func (s Script) Run(ctx context.Context, x *transform.Exec, inputs []graphmodel.
 		return fmt.Errorf("%w, switch it off on the Tools page to run scripts unconfined", sandbox.ErrUnsupported)
 	}
 
+	// The sandbox skips a path it cannot find, so a typo on the Tools
+	// page would read as a permission error from the script.
+	if confined {
+		for _, p := range missingPaths(jail) {
+			x.Warn("%s: the path %s is not on this node, the script cannot reach it", s.M.Name, p)
+		}
+	}
+
 	for _, in := range inputs {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -185,6 +193,19 @@ func (s Script) Run(ctx context.Context, x *transform.Exec, inputs []graphmodel.
 	}
 
 	return nil
+}
+
+// missingPaths lists the administrator's paths this node does not have.
+func missingPaths(jail tool.Entry) []string {
+	var out []string
+
+	for _, p := range slices.Concat(jail.ReadPaths, jail.WritePaths) {
+		if _, err := os.Stat(p); err != nil {
+			out = append(out, p)
+		}
+	}
+
+	return out
 }
 
 // stdinDoc is what the script reads.
