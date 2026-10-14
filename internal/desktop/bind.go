@@ -3,7 +3,6 @@
 package desktop
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -13,38 +12,41 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/ncruces/zenity"
 )
 
-// openTimeout bounds the call handing a URL to the system.
-const openTimeout = 10 * time.Second
-
 // OpenExternal hands a web address to the default browser. Anything
-// but http and https is refused, a page must not start programs.
+// but http and https is refused, a page must not start programs. A
+// bound function runs on the window's own thread, and xdg-open may
+// wait for the browser it started, so the opener is only started here
+// and reaped in the background.
 func OpenExternal(raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return fmt.Errorf("not a web address: %q", raw)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), openTimeout)
-	defer cancel()
+	cmd := opener(u.String())
+	if err := cmd.Start(); err != nil {
+		return err
+	}
 
-	return opener(ctx, u.String()).Run()
+	go func() { _ = cmd.Wait() }()
+
+	return nil
 }
 
 // opener is the system's own way of opening a web address.
-func opener(ctx context.Context, u string) *exec.Cmd {
+func opener(u string) *exec.Cmd {
 	switch runtime.GOOS {
 	case "darwin":
-		return exec.CommandContext(ctx, "open", u) //nolint:gosec // the scheme is checked by the caller
+		return exec.Command("open", u) //nolint:gosec // the scheme is checked by the caller
 	case "windows":
 		// Not cmd /c start, which reads & and ^ in a URL as its own.
-		return exec.CommandContext(ctx, "rundll32", "url.dll,FileProtocolHandler", u) //nolint:gosec // the scheme is checked by the caller
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", u) //nolint:gosec // the scheme is checked by the caller
 	default:
-		return exec.CommandContext(ctx, "xdg-open", u) //nolint:gosec // the scheme is checked by the caller
+		return exec.Command("xdg-open", u) //nolint:gosec // the scheme is checked by the caller
 	}
 }
 
